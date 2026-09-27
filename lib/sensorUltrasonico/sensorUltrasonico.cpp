@@ -27,7 +27,11 @@ float SensorUltrasonico::getDistanceCm() {
     digitalWrite(trigPin, LOW);
 
     // Medir el tiempo que tarda en recibir el eco
-    long duration = pulseIn(echoPin, HIGH, 30000); // Timeout de 30 ms para evitar bloqueos
+    unsigned long duration = pulseIn(echoPin, HIGH, 30000); // Timeout de 30 ms para evitar bloqueos
+
+    if (duration == 0) { // Si no se recibe eco, retornar -1 para indicar error/no hay pared detectada
+        return -1;
+    }
 
     // Calcular la distancia en centímetros
     float distance = (duration * 0.0343) / 2.0; // Velocidad del sonido: 343 m/s

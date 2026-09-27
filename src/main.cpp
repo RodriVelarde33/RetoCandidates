@@ -1,13 +1,18 @@
 #include <Arduino.h>
+#include <sensorUltrasonico.h>
+
+SensorUltrasonico frontal(22, 23);
 
 void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);
+    Serial.begin(9600);
 
+    frontal.begin();
 }
 
 void loop() {
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(1000);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(1000);
+    float distancia = frontal.getDistanceCm();
+
+    Serial.println(distancia);
+
+    delay(100);
 }
