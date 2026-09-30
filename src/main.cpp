@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <sensorUltrasonico.h>
 
-SensorUltrasonico frontal(22, 23);
+SensorUltrasonico frontal(13, 12);
 
 void setup() {
     Serial.begin(9600);
@@ -12,7 +12,12 @@ void setup() {
 void loop() {
     float distancia = frontal.getDistanceCm();
 
-    Serial.println(distancia);
+    
+    Serial.print("Distancia: ");
+    Serial.print(distancia);
+    Serial.println(" cm");
+    
+    
 
     delay(100);
 }
