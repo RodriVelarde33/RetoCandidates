@@ -20,6 +20,9 @@ public:
 
 private:
     Adafruit_MPU6050 mpu;
+    float referencia;             // el "cero" calibrado del giroscopio
+    float angulo;                 // angulo acumulado en grados
+    unsigned long ultimoTiempoMs; // este es el tiempo en mls de la ultima vez que se actualizo el angulo, para poder calcular el tiempo transcurrido entre actualizaciones
 };
 
 #endif
