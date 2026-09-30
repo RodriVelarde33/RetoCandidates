@@ -14,7 +14,8 @@ public:
     void begin();
     float getDistanceCm();
 
-    #endif
 };
+
+#endif
 
 
