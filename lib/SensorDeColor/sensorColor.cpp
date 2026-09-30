@@ -1,26 +1,29 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include <Adafruit_TCS34725.h>
 #include "sensorColor.h"
 
-Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X);
+SensorColor::SensorColor()
+    : tcs(TCS34725_INTEGRATIONTIME_50MS, TCS34725_GAIN_4X),
+      ultimoColorReportado(NINGUNO)
+{
+}
 
-static ColorDetectado ultimoColorReportado = NINGUNO;
-
-void inicializarSensorColor()
+bool SensorColor::inicializar()
 {
     if (!tcs.begin())
     {
         Serial.println("ERROR: no se detecto el sensor TCS34725");
-        while (1)
+        return false;
     }
     Serial.println("Sensor de color inicializado correctamente.");
+    return true;
 }
 
-void leerRGBNormalizado(float &r, float &g, float &b)
+void SensorColor::leerRGBNormalizado(float &r, float &g, float &b)
 {
     uint16_t rRaw, gRaw, bRaw, cRaw;
     tcs.getRawData(&rRaw, &gRaw, &bRaw, &cRaw);
+
     if (cRaw == 0)
     {
         r = g = b = 0;
@@ -32,7 +35,7 @@ void leerRGBNormalizado(float &r, float &g, float &b)
     b = (float)bRaw / (float)cRaw;
 }
 
-static float distancia(float r, float g, float b, ReferenciaColor ref)
+float SensorColor::distancia(float r, float g, float b, ReferenciaColor ref)
 {
     float dr = r - ref.r;
     float dg = g - ref.g;
@@ -40,7 +43,7 @@ static float distancia(float r, float g, float b, ReferenciaColor ref)
     return sqrt(dr * dr + dg * dg + db * db);
 }
 
-ColorDetectado leerColorActual()
+ColorDetectado SensorColor::leerColorActual()
 {
     float r, g, b;
     leerRGBNormalizado(r, g, b);
@@ -77,7 +80,7 @@ ColorDetectado leerColorActual()
     return resultado;
 }
 
-ColorDetectado detectarColorNuevo()
+ColorDetectado SensorColor::detectarColorNuevo()
 {
     ColorDetectado actual = leerColorActual();
 
@@ -93,31 +96,4 @@ ColorDetectado detectarColorNuevo()
     }
 
     return NINGUNO;
-}
-
-void calibrarSensorColor()
-{
-    uint16_t rRaw, gRaw, bRaw, cRaw;
-    tcs.getRawData(&rRaw, &gRaw, &bRaw, &cRaw);
-
-    float r, g, b;
-    leerRGBNormalizado(r, g, b);
-
-    Serial.print("RAW  r=");
-    Serial.print(rRaw);
-    Serial.print(" g=");
-    Serial.print(gRaw);
-    Serial.print(" b=");
-    Serial.print(bRaw);
-    Serial.print(" c=");
-    Serial.print(cRaw);
-
-    Serial.print("   NORM r=");
-    Serial.print(r, 3);
-    Serial.print(" g=");
-    Serial.print(g, 3);
-    Serial.print(" b=");
-    Serial.println(b, 3);
-
-    delay(500);
 }
