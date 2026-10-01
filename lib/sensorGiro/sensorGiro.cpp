@@ -15,7 +15,7 @@ bool Giroscopio::inicializar()
         return false;
     }
 
-        mpu.setGyroRange(MPU6050_RANGE_250_DEG);
+    mpu.setGyroRange(MPU6050_RANGE_250_DEG);
     mpu.setFilterBandwidth(MPU6050_BAND_21_HZ); // suaviza  el ruido
 
     Serial.println("MPU6050 inicializado correctamente.");
@@ -24,7 +24,7 @@ bool Giroscopio::inicializar()
 
 void Giroscopio::calibrar()
 {
-    Serial.println("Calibrando giroscopio, no muevas el robot...");
+    Serial.println("Calibrando giroscopio, no mueva el robot...");
 
     const int muestras = 200;
     float suma = 0;
@@ -41,7 +41,7 @@ void Giroscopio::calibrar()
     angulo = 0;
     ultimoTiempoMs = millis();
 
-    Serial.print("Calibracion lista. Offset Z: ");
+    Serial.print("Calibracion lista. desde Z: ");
     Serial.println(referencia, 5);
 }
 
