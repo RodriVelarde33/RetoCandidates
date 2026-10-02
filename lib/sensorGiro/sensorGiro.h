@@ -9,18 +9,18 @@ class Giroscopio
 public:
     Giroscopio();
     bool inicializar();
-    // esta funcion se llama cuando el robot esta completamente quieto, para que el sensor pueda calibrarse y obtener un valor de referencia
+    // esta funcion se llama cuando el robot esta completamente quieto,para que el sensor pueda calibrarse y obtener un valor de referencia
     void calibrar();
-    // esta funcion se llama en cada iteracion del loop principal, para actualizar el valor del angulo actual
+    // esta funcion se llama en cada iteracion del loop principal para actualizar el valor del angulo actual
     void actualizar();
-    // esta funcion devuelve el angulo actual del robot, en grados, con respecto a la posicion inicial
+    // esta funcion devuelve el angulo actual del robot en grados con respecto a la posicion inicial
     float anguloActual();
     // este es para ajustar el angulo a 0, es de mucha ayuda cuando queremos hacer un giro
     void resetAngulo();
 
 private:
     Adafruit_MPU6050 mpu;
-    float referencia;             // el "cero" calibrado del giroscopio
+    float referencia;             // este es el cero calibrado del giroscopio
     float angulo;                 // angulo acumulado en grados
     unsigned long ultimoTiempoMs; // este es el tiempo en mls de la ultima vez que se actualizo el angulo, para poder calcular el tiempo transcurrido entre actualizaciones
 };

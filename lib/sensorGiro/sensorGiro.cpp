@@ -1,6 +1,11 @@
+/*
+Aqui solo tendra las funciones basicas para estabilizar el sensor de giro
+su calibracion y su reset en cada giro para que no se vaya volvienddo loco
+*/
+
 #include <Arduino.h>
 #include <Wire.h>
-#include "giroscopio.h"
+#include "sensorGiro.h"
 
 Giroscopio::Giroscopio()
     : referencia(0), angulo(0), ultimoTiempoMs(0)
@@ -33,7 +38,7 @@ void Giroscopio::calibrar()
     {
         sensors_event_t a, g, temp;
         mpu.getEvent(&a, &g, &temp);
-        suma += g.gyro.z; // eje Z = giro sobre el piso (yaw), el q importa para girar
+        suma += g.gyro.z; // eje Z = giro sobre el piso , el q importa para girar
         delay(5);
     }
 
