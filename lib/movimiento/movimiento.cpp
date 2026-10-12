@@ -11,7 +11,7 @@ Movimiento::Movimiento(PuenteH &puente,SensorUltrasonico &frontal)
       frontal(frontal)
 
 {
-    velocidad = 150;
+    velocidad = 100;
 }
 
 // Inicializar componentes
