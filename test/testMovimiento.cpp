@@ -17,6 +17,8 @@ const uint8_t velocidad = 150;
 void avanzar();
 void retroceder();
 void detener();
+void derecha();
+void izquierda();
 
 
 void setup()
@@ -53,6 +55,14 @@ void loop()
     // Detenerse durante 3 segundos
     detener();
     delay(3000);
+
+    derecha();
+    delay(2000);
+
+    izquierda();
+    delay(2000);
+
+
 }
 
 
@@ -72,6 +82,35 @@ void avanzar()
     digitalWrite(IN4, LOW);
 }
 
+void derecha()
+{
+    // Establecer velocidad
+    analogWrite(ENA, velocidad);
+    analogWrite(ENB, velocidad);
+
+    // Motor izquierdo hacia adelante
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+
+    // Motor derecho hacia atrás
+    digitalWrite(IN3, HIGH);
+    digitalWrite(IN4, HIGH);
+}
+
+void izquierda()
+{
+    // Establecer velocidad
+    analogWrite(ENA, velocidad);
+    analogWrite(ENB, velocidad);
+
+    // Motor izquierdo hacia adelante
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, HIGH);
+
+    // Motor derecho hacia atrás
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, LOW);
+}
 
 // Hace que ambos lados retrocedan
 void retroceder()
