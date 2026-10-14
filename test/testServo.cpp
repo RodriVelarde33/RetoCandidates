@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <garra.h>
 
-// Pines del puente H (los mismos de antes)
-Garra garra(9);
+
+Garra garra(7);
 
 
 void setup()
