@@ -40,21 +40,10 @@ void setup()
 
 void loop()
 {
-    // Avanzar durante 2 segundos
-    avanzar();
-    delay(2000);
-
-    // Detenerse durante 1 segundo
-    detener();
-    delay(1000);
-
-    // Retroceder durante 2 segundos
-    retroceder();
-    delay(2000);
-
+    
     // Detenerse durante 3 segundos
     detener();
-    delay(3000);
+    delay(2000);
 
     derecha();
     delay(2000);
@@ -85,31 +74,24 @@ void avanzar()
 void derecha()
 {
     // Establecer velocidad
-    analogWrite(ENA, velocidad);
+    analogWrite(ENA, 0);
     analogWrite(ENB, velocidad);
 
-    // Motor izquierdo hacia adelante
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, LOW);
-
-    // Motor derecho hacia atrás
+    // Motor derecho hacia adelante
     digitalWrite(IN3, HIGH);
-    digitalWrite(IN4, HIGH);
+    digitalWrite(IN4, LOW);
 }
 
 void izquierda()
 {
     // Establecer velocidad
     analogWrite(ENA, velocidad);
-    analogWrite(ENB, velocidad);
+    analogWrite(ENB, 0);
 
     // Motor izquierdo hacia adelante
     digitalWrite(IN1, HIGH);
-    digitalWrite(IN2, HIGH);
+    digitalWrite(IN2, LOW);
 
-    // Motor derecho hacia atrás
-    digitalWrite(IN3, LOW);
-    digitalWrite(IN4, LOW);
 }
 
 // Hace que ambos lados retrocedan

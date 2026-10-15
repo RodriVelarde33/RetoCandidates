@@ -6,7 +6,7 @@ PuenteH puente(8, 9, 2, 10, 11, 3);
 
 // Sensor ultrasónico frontal
 // Cambiar estos pines cuando confirme las conexiones
-SensorUltrasonico frontal(42, 44);
+SensorUltrasonico frontal(30, 31);
 
 // Integrar los componentes
 Movimiento movimiento(puente, frontal);
@@ -23,6 +23,6 @@ void setup()
 void loop()
 {
     movimiento.actualizar();
-
+    Serial.print(String(frontal.getDistanceCm()) + "\n");
     delay(100);
 }
