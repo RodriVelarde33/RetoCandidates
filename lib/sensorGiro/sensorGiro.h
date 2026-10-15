@@ -4,7 +4,7 @@
 
 #include <Arduino.h>
 // Librería integrada de Arduino para la comunicación I2C.
-// Nos permite leer y escribir directamente en el MPU6050.
+// Permite leer y escribir directamente en el MPU6050.
 #include <Wire.h>
 
 class SensorGiro {
@@ -72,5 +72,4 @@ public:
     float getAceleracionZ();
 };
 
-// Evita que el compilador procese este archivo más de una vez.
 #endif
