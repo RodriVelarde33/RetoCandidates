@@ -84,7 +84,6 @@ void loop()
 {
     unsigned long ahora = millis();
 
-    // Timeout de ronda
     if (estadoGlobal == EJECUTANDO_PISTA_A &&
         ahora - tiempoInicioRonda >= TIEMPO_RONDA_MS)
     {
@@ -95,7 +94,6 @@ void loop()
     switch (estadoGlobal)
     {
     case CALIBRACION:
-        // Espera 3 segundos antes de arrancar
         if (ahora - tiempoInicioRonda >= TIEMPO_CALIBRACION_MS)
         {
             pistaA_init(movimiento);
