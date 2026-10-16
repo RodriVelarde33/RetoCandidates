@@ -5,7 +5,7 @@
 #include "../SensorDeColor/sensorColor.h"
 
 // LED
-#define LED_1 51
+#define LED_1 50
 #define LED_ON_MS 200
 #define LED_OFF_MS 200
 
@@ -23,7 +23,7 @@
 #define DIST_CENTRAR_CM 21.0f
 
 // Velocidades
-#define VEL_AVANCE_PWM 120
+#define VEL_AVANCE_PWM 60
 #define VEL_GIRO_PWM 120
 #define VEL_GIRO_MIN_PWM 100
 
