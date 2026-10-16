@@ -2,7 +2,7 @@
 #include <sensorUltrasonico.h>
 
 //trig, echo
-SensorUltrasonico frontal(13, 12);
+SensorUltrasonico frontal(30, 31);
 
 void setup() {
     Serial.begin(9600);

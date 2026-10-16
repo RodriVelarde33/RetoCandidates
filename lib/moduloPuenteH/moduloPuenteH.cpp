@@ -3,13 +3,13 @@
 PuenteH::PuenteH(uint8_t in1, uint8_t in2, uint8_t ena,
                  uint8_t in3, uint8_t in4, uint8_t enb)
 {
-    this->in1 = in1;
-    this->in2 = in2;
-    this->ena = ena;
+    this->in1 = in3;
+    this->in2 = in4;
+    this->ena = enb;
 
-    this->in3 = in3;
-    this->in4 = in4;
-    this->enb = enb;
+    this->in3 = in1;
+    this->in4 = in2;
+    this->enb = ena;
 }
 
 void PuenteH::begin()
