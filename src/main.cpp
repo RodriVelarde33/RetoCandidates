@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+
 #include "logica.h"
 #include "config.h"
 #include "movimiento.h"
@@ -49,53 +50,58 @@ enum EstadoGlobal
 EstadoGlobal estadoGlobal = CALIBRACION;
 
 unsigned long tiempoInicioRonda = 0;
-const unsigned long TIEMPO_CALIBRACION = 3000;
-const unsigned long TIEMPO_RONDA = 480000;
+const unsigned long TIEMPO_CALIBRACION_MS = 3000;
+const unsigned long TIEMPO_RONDA_MS = 480000UL;
 
 void setup()
 {
     Serial.begin(115200);
-    delay(500);
-    Serial.println("=== ROBOT CANDIDATES 2026 ===");
+    delay(300);
+    Serial.println(F("=== ROBOT CANDIDATES 2026 ==="));
 
-    // Wire.begin() esta en movimiento.begin()
-
-    Serial.println("Init movimiento...");
+    Serial.println(F("Init movimiento..."));
     bool ok = movimiento.begin();
 
-    Serial.println("Init garra...");
+    Serial.println(F("Init garra..."));
     garra.inicializar(0, 90);
+
+    pinMode(LED_1, OUTPUT);
+    digitalWrite(LED_1, LOW);
 
     tiempoInicioRonda = millis();
 
     if (!ok)
     {
         estadoGlobal = FIN_RONDA;
-        Serial.println("[ERROR] MPU6050 no responde.");
+        Serial.println(F("[ERROR] MPU6050 no responde."));
         return;
     }
 
-    Serial.println("Listo. Pista A en 3s...");
+    Serial.println(F("Listo. Pista A en 3s..."));
 }
 
 void loop()
 {
+    unsigned long ahora = millis();
+
+    // Timeout de ronda
     if (estadoGlobal == EJECUTANDO_PISTA_A &&
-        millis() - tiempoInicioRonda >= TIEMPO_RONDA)
+        ahora - tiempoInicioRonda >= TIEMPO_RONDA_MS)
     {
         estadoGlobal = FIN_RONDA;
-        Serial.println("Tiempo agotado.");
+        Serial.println(F("Tiempo agotado."));
     }
 
     switch (estadoGlobal)
     {
     case CALIBRACION:
-        if (millis() - tiempoInicioRonda >= TIEMPO_CALIBRACION)
+        // Espera 3 segundos antes de arrancar
+        if (ahora - tiempoInicioRonda >= TIEMPO_CALIBRACION_MS)
         {
             pistaA_init(movimiento);
-            tiempoInicioRonda = millis();
+            tiempoInicioRonda = ahora;
             estadoGlobal = EJECUTANDO_PISTA_A;
-            Serial.println(">>> PISTA A <<<");
+            Serial.println(F(">>> PISTA A <<<"));
         }
         break;
 
@@ -103,12 +109,13 @@ void loop()
         if (pistaA_ejecutar(movimiento, colorAbajo))
         {
             estadoGlobal = FIN_RONDA;
-            Serial.println(">>> FIN <<<");
+            Serial.println(F(">>> FIN <<<"));
         }
         break;
 
     case FIN_RONDA:
         movimiento.detener();
+        apagarLEDs();
         break;
     }
 }
