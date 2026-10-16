@@ -19,31 +19,25 @@
 // Distancias (cm)
 #define DIST_LATERAL_IDEAL_CM 6.0f
 #define DIST_PARED_LATERAL_CM 15.0f
-#define DIST_FRENTE_ALTO_CM 15.0f
-#define DIST_CENTRAR_CM 21.0f
+#define DIST_FRENTE_PARADA_CM 15.0f
 
 // Velocidades
-#define VEL_AVANCE_PWM 80
+#define VEL_AVANCE_PWM 60
 #define VEL_GIRO_PWM 120
 #define VEL_GIRO_MIN_PWM 100
 
-#define VEL_AVANCE_CM_S 20.0f
-#define TIEMPO_CENTRAR_MS ((unsigned long)(1000.0f * DIST_CENTRAR_CM / VEL_AVANCE_CM_S))
-
-// Control
+// Compensacion de motores
 #define TRIM_REAL_IZQ 1.0f
 #define TRIM_REAL_DER 1.05f
 
+// Giroscopio
 #define SIGNO_GIRO (-1.0f)
 
+// Control
 #define KP_RUMBO 1.5f
 #define CORR_MAX 12
 #define KP_PARED_GRADOS 1.5f
 #define MAX_AJUSTE_RUMBO 6.0f
-
-#define KP_GIRO 1.0f
 #define TOL_GIRO_GRADOS 0.3f
-
-#define LECTURAS_SIN_COLOR 3
 
 #endif
