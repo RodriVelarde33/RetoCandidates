@@ -1,4 +1,3 @@
-
 #ifndef GARRA_H
 #define GARRA_H
 
@@ -9,9 +8,7 @@ class Garra
 {
 public:
     Garra(uint8_t pinServo);
-
     void inicializar(int anguloAbierta, int anguloCerrada);
-
     void abrir();
     void cerrar();
 
