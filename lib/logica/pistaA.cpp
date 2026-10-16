@@ -21,7 +21,6 @@ static unsigned long ultimoColorAceptado = 0;
 static unsigned long tLed = 0;
 static int parpadeosRestantes = 0;
 static bool ledEncendido = false;
-static uint8_t reintentosAtasco = 0;
 
 static void cambiarEstado(EstadoPista nuevo)
 {
@@ -112,7 +111,6 @@ void pistaA_init(Movimiento &mov)
     ultimoColorAceptado = 0;
     colorPendiente = ColorDetectado::NINGUNO;
     parpadeosRestantes = 0;
-    reintentosAtasco = 0;
 
     mov.startForward();
 }
@@ -153,16 +151,7 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
         if (mov.isStuck())
         {
             mov.detener();
-            Serial.println(F("[PISTA A] Atasco detectado."));
-            reintentosAtasco++;
-
-            if (reintentosAtasco > ATASCO_MAX_REINTENTOS)
-            {
-                Serial.println(F("[PISTA A] Demasiados atascos. FIN."));
-                cambiarEstado(EstadoPista::FIN);
-                return true;
-            }
-
+            Serial.println(F("[PISTA A] Atasco. Luchando..."));
             mov.startBackwardMs(RETROCESO_ATASCO_MS);
             cambiarEstado(EstadoPista::RECUPERANDO_ATASCO);
             break;
@@ -280,7 +269,6 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
 void mostrarColor(ColorDetectado color)
 {
     iniciarParpadeo(color);
-
     while (parpadeosRestantes > 0)
     {
         actualizarLED();

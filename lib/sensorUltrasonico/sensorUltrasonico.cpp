@@ -1,5 +1,4 @@
 #include "sensorUltrasonico.h"
-#include "../logica/config.h"
 
 SensorUltrasonico::SensorUltrasonico(uint8_t trig, uint8_t echo)
 {

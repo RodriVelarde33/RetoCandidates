@@ -1,4 +1,5 @@
 #include "sensorColor.h"
+#include "../logica/config.h"
 
 // Registros TCS34725
 #define TCS34725_COMMAND_BIT 0x80
@@ -45,17 +46,23 @@ uint16_t SensorColor::leer16bits(uint8_t reg)
 }
 
 // Constructor
-SensorColor::SensorColor(uint8_t canal) : canalMultiplexor(canal) {}
+SensorColor::SensorColor(uint8_t canal) : canalMultiplexor(canal)
+{
+    ultimoColor = ColorDetectado::NINGUNO;
+    candidatoColor = ColorDetectado::NINGUNO;
+    lecturasConsecutivas = 0;
+    ultimaLectura = 0;
+}
 
 // Init sensor
 void SensorColor::begin()
 {
     seleccionarCanal(canalMultiplexor);
-    escribirRegistro(TCS34725_ENABLE, 0x01); // power on
+    escribirRegistro(TCS34725_ENABLE, 0x01);
     delay(3);
-    escribirRegistro(TCS34725_ENABLE, 0x03);  // RGBC enable
-    escribirRegistro(TCS34725_ATIME, 0xEB);   // 50ms
-    escribirRegistro(TCS34725_CONTROL, 0x01); // gain 4x
+    escribirRegistro(TCS34725_ENABLE, 0x03);
+    escribirRegistro(TCS34725_ATIME, 0xEB);
+    escribirRegistro(TCS34725_CONTROL, 0x01);
 }
 
 // Lee valores crudos C,R,G,B
@@ -68,7 +75,7 @@ void SensorColor::leerRaw(uint16_t &c, uint16_t &r, uint16_t &g, uint16_t &b)
     b = leer16bits(TCS34725_BDATAL);
 }
 
-// Clasifica color con umbrales
+// Clasifica color con umbrales calibrados
 ColorDetectado SensorColor::detectarColorNuevo()
 {
     uint16_t c, r, g, b;
@@ -88,4 +95,38 @@ ColorDetectado SensorColor::detectarColorNuevo()
         return ColorDetectado::VERDE;
 
     return ColorDetectado::NINGUNO;
+}
+
+// Antirrebote: N lecturas consecutivas
+ColorDetectado SensorColor::detectarColorEstable()
+{
+    unsigned long ahora = millis();
+
+    if (ahora - ultimaLectura < COLOR_INTERVALO_MS)
+    {
+        return ultimoColor;
+    }
+
+    ultimaLectura = ahora;
+
+    ColorDetectado lectura = detectarColorNuevo();
+
+    if (lectura == candidatoColor)
+    {
+        if (lecturasConsecutivas < 255)
+            lecturasConsecutivas++;
+    }
+    else
+    {
+        candidatoColor = lectura;
+        lecturasConsecutivas = 1;
+    }
+
+    if (lecturasConsecutivas >= COLOR_LECTURAS_CONSECUTIVAS)
+    {
+        ultimoColor = candidatoColor;
+        lecturasConsecutivas = 0;
+    }
+
+    return ultimoColor;
 }
