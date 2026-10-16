@@ -24,7 +24,6 @@ void PuenteH::izquierdaAdelante(uint8_t velocidad)
 
 void PuenteH::izquierdaAtras(uint8_t velocidad)
 {
-    // Implementar después
 }
 
 void PuenteH::detenerIzquierda()
