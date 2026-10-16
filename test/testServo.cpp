@@ -9,7 +9,7 @@ void setup()
 {
     Serial.begin(9600);
 
-    garra.inicializar(90, 10);
+    garra.inicializar(110, 0);
 
     Serial.println("Iniciando prueba de servo motor");
 }
