@@ -5,11 +5,11 @@
 #define DIST_FRENTE_PARADA_CM 15.0f
 #define TIEMPO_AVANCE_MAX_MS 2500
 #define COOLDOWN_COLOR_MS 3000
+#define TIEMPO_RETROCESO_MS 200 // <-- retroceso antes de girar
 
 // Estado
 static unsigned long ultimoMostrarColor = 0;
 
-// ==================== HELPERS ====================
 // Es color intermedio?
 static bool esColorIntermedio(ColorDetectado c)
 {
@@ -26,15 +26,12 @@ static bool hayParedFrente(Movimiento &mov, float umbral)
         float d = mov.getDistanciaFrontal();
         if (d > 0 && d < umbral)
             cuantos++;
-        delay(15); // antes 20
+        delay(15);
     }
     return cuantos >= 2;
 }
 
-// Checar color. Devuelve:
-//   0 = seguir
-//   1 = FIN (rojo)
-//   2 = color mostrado (ya paro + parpadeo)
+// Checar color (0=seguir, 1=FIN, 2=color mostrado)
 static int checarColor(Movimiento &mov, SensorColor &color)
 {
     if (millis() - ultimoMostrarColor < COOLDOWN_COLOR_MS)
@@ -61,7 +58,7 @@ static int checarColor(Movimiento &mov, SensorColor &color)
     return 0;
 }
 
-// ==================== INIT ====================
+// Init
 void pistaA_init(Movimiento &mov)
 {
     Serial.println("[PISTA A] Inicializando MAZE...");
@@ -74,10 +71,10 @@ void pistaA_init(Movimiento &mov)
     ultimoMostrarColor = 0;
 }
 
-// ==================== LOGICA PRINCIPAL ====================
+// Logica principal
 bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
 {
-    // Chequeo inicial de color
+    // Chequeo de color
     int r = checarColor(mov, color);
     if (r == 1)
     {
@@ -90,10 +87,11 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
     // Avanzar
     Serial.println("[PISTA A] Avanzando...");
     unsigned long t0 = millis();
+    bool paredCerca = false;
 
     while (millis() - t0 < TIEMPO_AVANCE_MAX_MS)
     {
-        // Chequeo de color mientras avanza
+        // Chequeo de color
         r = checarColor(mov, color);
         if (r == 1)
         {
@@ -103,14 +101,23 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
         if (r == 2)
             return false;
 
-        // Pared al frente?
-        if (hayParedFrente(mov, DIST_FRENTE_PARADA_CM))
+        // Pared cerca? -> parar
+        float dF = mov.getDistanciaFrontal();
+        if (dF > 0 && dF < DIST_FRENTE_PARADA_CM)
         {
-            Serial.println("[PISTA A] Pared al frente detectada");
-            break;
+            delay(30);
+            float dF2 = mov.getDistanciaFrontal();
+            if (dF2 > 0 && dF2 < DIST_FRENTE_PARADA_CM)
+            {
+                Serial.print("[PISTA A] Pared cerca (");
+                Serial.print(dF2);
+                Serial.println(" cm)");
+                paredCerca = true;
+                break;
+            }
         }
 
-        // Avanzar con correccion de paredes
+        // Avanzar con correccion
         float dI = mov.getDistanciaIzquierda();
         float dD = mov.getDistanciaDerecha();
         mov.avanzarConParedes(dI, dD);
@@ -119,11 +126,17 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
     }
 
     mov.detener();
-    delay(300);
+    delay(200);
 
-    // Decidir
-    if (hayParedFrente(mov, DIST_FRENTE_PARADA_CM))
+    // Si hay pared -> retroceder y girar
+    if (paredCerca && hayParedFrente(mov, DIST_FRENTE_PARADA_CM))
     {
+        Serial.print("[PISTA A] Retroceder ");
+        Serial.print(TIEMPO_RETROCESO_MS);
+        Serial.println(" ms");
+        mov.retrocederTiempo(TIEMPO_RETROCESO_MS);
+        delay(200);
+
         Serial.println("[PISTA A] -> Giro DERECHA");
         mov.girarDerecha90();
     }
@@ -135,7 +148,7 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
     return false;
 }
 
-// ==================== UTILIDADES ====================
+// Utilidades
 void mostrarColor(ColorDetectado color)
 {
     int parpadeos = 0;
