@@ -5,11 +5,11 @@
 #include "../SensorDeColor/sensorColor.h"
 
 // LED
-#define LED_1 50
+#define LED_1 51
 #define LED_ON_MS 200
 #define LED_OFF_MS 200
 
-// Colores de la pista
+// Colores pista A
 #define COLOR_A_1 ColorDetectado::AZUL
 #define COLOR_A_2 ColorDetectado::AMARILLO
 #define COLOR_A_3 ColorDetectado::NARANJA
@@ -23,7 +23,7 @@
 #define DIST_CENTRAR_CM 21.0f
 
 // Velocidades
-#define VEL_AVANCE_PWM 60
+#define VEL_AVANCE_PWM 80
 #define VEL_GIRO_PWM 120
 #define VEL_GIRO_MIN_PWM 100
 
