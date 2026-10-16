@@ -26,8 +26,6 @@ private:
     float rumboObjetivo;
     unsigned long tRumbo;
 
-    void esperarActualizando(unsigned long ms);
-
 public:
     Movimiento(PuenteH &puente,
                SensorUltrasonico &frontal,
@@ -49,7 +47,6 @@ public:
     float getDistanciaFrontal();
     float getDistanciaIzquierda();
     float getDistanciaDerecha();
-    void leerDistancias(float &frente, float &izq, float &der);
 
     // Giroscopio
     void actualizarRumbo();
@@ -58,7 +55,6 @@ public:
 
     // Avance
     void avanzarConParedes(float dIzq, float dDer);
-    void avanzarRecto();
 
     // Giros
     void girarGrados(float grados);
@@ -66,6 +62,7 @@ public:
     void girarIzquierda90() { girarGrados(-90); }
     void girar180();
 
+    // Retroceso
     void retrocederTiempo(unsigned long ms);
 
     void setVelocidad(int v) { velocidad = v; }

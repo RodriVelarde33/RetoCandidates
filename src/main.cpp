@@ -36,13 +36,8 @@ SensorColor colorAbajo(CANAL_COLOR_ABAJO);
 SensorGiro giroscopio(0x70, 2, 0x68);
 Garra garra(PIN_SERVO_GARRA);
 
-Movimiento movimiento(puente,
-                      ultrasonicoFrontal,
-                      ultrasonicoIzq,
-                      ultrasonicoDer,
-                      colorAbajo,
-                      garra,
-                      giroscopio);
+Movimiento movimiento(puente, ultrasonicoFrontal, ultrasonicoIzq,
+                      ultrasonicoDer, colorAbajo, garra, giroscopio);
 
 // Estados
 enum EstadoGlobal
@@ -51,52 +46,45 @@ enum EstadoGlobal
     EJECUTANDO_PISTA_A,
     FIN_RONDA
 };
-
 EstadoGlobal estadoGlobal = CALIBRACION;
+
 unsigned long tiempoInicioRonda = 0;
 const unsigned long TIEMPO_CALIBRACION = 3000;
 const unsigned long TIEMPO_RONDA = 480000;
 
-// Setup
 void setup()
 {
     Serial.begin(115200);
     delay(500);
     Serial.println("=== ROBOT CANDIDATES 2026 ===");
 
-    Wire.begin();
-    puente.setFactores(1.0, 1.0);
+    // Wire.begin() esta en movimiento.begin()
 
     Serial.println("Init movimiento...");
-    bool movimientoOK = movimiento.begin();
+    bool ok = movimiento.begin();
 
     Serial.println("Init garra...");
     garra.inicializar(0, 90);
 
     tiempoInicioRonda = millis();
 
-    if (!movimientoOK)
+    if (!ok)
     {
         estadoGlobal = FIN_RONDA;
-        Serial.println("[ERROR] MPU6050 no responde. Revisa I2C.");
-        movimiento.detener();
+        Serial.println("[ERROR] MPU6050 no responde.");
         return;
     }
 
-    Serial.println("Listo. Iniciando Pista A...");
+    Serial.println("Listo. Pista A en 3s...");
 }
 
-// Loop
 void loop()
 {
-    // Timeout de ronda
-    if (estadoGlobal == EJECUTANDO_PISTA_A)
+    if (estadoGlobal == EJECUTANDO_PISTA_A &&
+        millis() - tiempoInicioRonda >= TIEMPO_RONDA)
     {
-        if (millis() - tiempoInicioRonda >= TIEMPO_RONDA)
-        {
-            estadoGlobal = FIN_RONDA;
-            Serial.println("Tiempo agotado.");
-        }
+        estadoGlobal = FIN_RONDA;
+        Serial.println("Tiempo agotado.");
     }
 
     switch (estadoGlobal)
@@ -107,7 +95,7 @@ void loop()
             pistaA_init(movimiento);
             tiempoInicioRonda = millis();
             estadoGlobal = EJECUTANDO_PISTA_A;
-            Serial.println(">>> EJECUTANDO PISTA A <<<");
+            Serial.println(">>> PISTA A <<<");
         }
         break;
 
@@ -115,7 +103,7 @@ void loop()
         if (pistaA_ejecutar(movimiento, colorAbajo))
         {
             estadoGlobal = FIN_RONDA;
-            Serial.println(">>> FIN DE PISTA A <<<");
+            Serial.println(">>> FIN <<<");
         }
         break;
 

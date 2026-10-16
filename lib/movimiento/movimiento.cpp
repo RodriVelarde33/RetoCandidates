@@ -4,7 +4,7 @@
 
 static const bool PUENTE_CON_SWAP = true;
 
-// Aplica velocidad a un lado del puente
+// Aplica velocidad a un lado
 static void aplicar(PuenteH &p, bool ladoLogicoIzq, int v)
 {
     if (ladoLogicoIzq)
@@ -23,7 +23,6 @@ static void aplicar(PuenteH &p, bool ladoLogicoIzq, int v)
     }
 }
 
-// Constructor
 Movimiento::Movimiento(PuenteH &puente,
                        SensorUltrasonico &frontal,
                        SensorUltrasonico &izquierdo,
@@ -42,10 +41,10 @@ Movimiento::Movimiento(PuenteH &puente,
     tRumbo = 0;
 }
 
-// Init + calibrar giroscopio
+// Init
 bool Movimiento::begin()
 {
-    Wire.begin(); // I2C
+    Wire.begin();
     delay(50);
 
     puente.begin();
@@ -54,15 +53,14 @@ bool Movimiento::begin()
     derecho.begin();
     colorFrontal.begin();
 
-    // MPU6050 responde?
     if (!giro.begin())
     {
-        Serial.println("[ERROR] MPU6050 no responde por I2C/multiplexor.");
+        Serial.println("[ERROR] MPU6050 no responde");
         detener();
         return false;
     }
 
-    // Calibrar offset (robot quieto)
+    // Calibrar offset
     Serial.println("[CALIB] Calibrando giroscopio...");
     float suma = 0;
     for (int i = 0; i < 100; i++)
@@ -110,52 +108,25 @@ float Movimiento::getDistanciaFrontal() { return frontal.getDistanceCm(); }
 float Movimiento::getDistanciaIzquierda() { return izquierdo.getDistanceCm(); }
 float Movimiento::getDistanciaDerecha() { return derecho.getDistanceCm(); }
 
-// Leer los 3 en secuencia, con promedio en el frontal (sin eco = 999)
-void Movimiento::leerDistancias(float &f, float &i, float &d)
-{
-    // Promedio de 2 lecturas del frontal (filtra ruido)
-    float f1 = frontal.getDistanceCm();
-    delay(8);
-    float f2 = frontal.getDistanceCm();
-    f = (f1 + f2) / 2.0f;
-
-    d = derecho.getDistanceCm();
-    delay(8);
-    i = izquierdo.getDistanceCm();
-
-    if (f < 0)
-        f = 999;
-    if (d < 0)
-        d = 999;
-    if (i < 0)
-        i = 999;
-}
-
 // ==================== GIROSCOPIO ====================
-// Integra velocidad angular en rumbo
 void Movimiento::actualizarRumbo()
 {
     unsigned long ahora = millis();
     float dt = (ahora - tRumbo) / 1000.0f;
     tRumbo = ahora;
 
-    // Si paso mucho tiempo sin actualizar, descarta (evita saltos)
     if (dt > 0.3f)
         return;
-
     if (!giro.actualizar())
         return;
 
     float gz = (giro.getGiroZ() - offsetGiroZ) * SIGNO_GIRO;
-
-    // Deadzone anti-ruido
     if (fabs(gz) < 0.3f)
         gz = 0;
 
     rumbo += gz * dt;
 }
 
-// El rumbo actual es el que quiero mantener
 void Movimiento::fijarRumbo()
 {
     tRumbo = millis();
@@ -163,7 +134,6 @@ void Movimiento::fijarRumbo()
 }
 
 // ==================== AVANZAR RECTO ====================
-// Recto con rumbo fijo + centrado con paredes
 void Movimiento::avanzarConParedes(float dIzq, float dDer)
 {
     actualizarRumbo();
@@ -171,7 +141,6 @@ void Movimiento::avanzarConParedes(float dIzq, float dDer)
     bool hayIzq = (dIzq > 0 && dIzq < DIST_PARED_LATERAL_CM);
     bool hayDer = (dDer > 0 && dDer < DIST_PARED_LATERAL_CM);
 
-    // errLat > 0 -> pegado a la izq -> ir a la derecha
     float errLat = 0;
     if (hayIzq && hayDer)
         errLat = (dDer - dIzq) / 2.0f;
@@ -180,22 +149,18 @@ void Movimiento::avanzarConParedes(float dIzq, float dDer)
     else if (hayDer)
         errLat = dDer - DIST_LATERAL_IDEAL_CM;
 
-    // Las paredes solo inclinan un poco el rumbo
     float ajuste = constrain(KP_PARED_GRADOS * errLat,
                              -MAX_AJUSTE_RUMBO, MAX_AJUSTE_RUMBO);
     float err = (rumboObjetivo + ajuste) - rumbo;
 
     int corr = (int)constrain(KP_RUMBO * err, -CORR_MAX, CORR_MAX);
-
-    // Limitar correccion a 50% de la velocidad (evita giros bruscos)
     int corrMax = velocidad / 2;
     corr = constrain(corr, -corrMax, corrMax);
 
-    // corr > 0 -> rueda izq más rápida -> gira derecha
     mover(max(0, velocidad + corr), max(0, velocidad - corr));
 }
 
-// ==================== GIRO CON CORRECCION ====================
+// ==================== GIRO ====================
 void Movimiento::girarGrados(float grados)
 {
     detener();
@@ -204,8 +169,8 @@ void Movimiento::girarGrados(float grados)
     actualizarRumbo();
     float rumboInicial = rumbo;
 
-    // Anticipo para compensar inercia
-    float anticipo = 0;
+    // Anticipo por inercia
+    float anticipo;
     if (fabs(grados) >= 150.0f)
         anticipo = 5.0f;
     else if (fabs(grados) >= 80.0f)
@@ -213,42 +178,34 @@ void Movimiento::girarGrados(float grados)
     else
         anticipo = 1.5f;
 
-    float objetivo;
-    if (grados > 0)
-        objetivo = rumboInicial + grados - anticipo;
-    else
-        objetivo = rumboInicial + grados + anticipo;
+    float objetivo = (grados > 0)
+                         ? rumboInicial + grados - anticipo
+                         : rumboInicial + grados + anticipo;
 
     Serial.print("[GIRO] pedido=");
     Serial.print(grados);
     Serial.print(" | objetivo=");
     Serial.print(objetivo);
-    Serial.print(" | rumboIni=");
+    Serial.print(" | ini=");
     Serial.println(rumboInicial);
 
-    // FASE 1: GIRAR
+    // FASE 1: girar
     unsigned long tInicio = millis();
-    const unsigned long tMax = 5000;
-    bool objetivoAlcanzado = false;
+    bool alcanzado = false;
 
-    while (millis() - tInicio < tMax)
+    while (millis() - tInicio < 5000)
     {
         actualizarRumbo();
         float err = objetivo - rumbo;
 
         if (fabs(err) <= TOL_GIRO_GRADOS)
         {
-            objetivoAlcanzado = true;
+            alcanzado = true;
             break;
         }
 
-        int v;
-        if (fabs(err) < 15.0f)
-            v = VEL_GIRO_MIN_PWM;
-        else
-            v = velocidadGiro;
+        int v = (fabs(err) < 15.0f) ? VEL_GIRO_MIN_PWM : velocidadGiro;
 
-        // err > 0 -> falta girar a la derecha
         if (err > 0)
             mover(-v, v);
         else
@@ -261,25 +218,22 @@ void Movimiento::girarGrados(float grados)
     delay(400);
     actualizarRumbo();
 
-    if (!objetivoAlcanzado)
-    {
-        Serial.println("[AVISO] Giro: no alcanzo objetivo en fase 1, se corrige.");
-    }
+    if (!alcanzado)
+        Serial.println("[AVISO] Fase 1 no alcanzo objetivo, se corrige");
 
-    // Objetivo real (sin anticipo)
     float objetivoReal = rumboInicial + grados;
     float error = objetivoReal - rumbo;
 
     Serial.print("[GIRO] real=");
     Serial.print(rumbo - rumboInicial);
-    Serial.print(" | error=");
+    Serial.print(" | err=");
     Serial.println(error);
 
-    // FASE 2: CORREGIR
-    int intentosCorreccion = 0;
-    while (fabs(error) > TOL_GIRO_GRADOS && intentosCorreccion < 5)
+    // FASE 2: corregir
+    int intentos = 0;
+    while (fabs(error) > TOL_GIRO_GRADOS && intentos < 5)
     {
-        intentosCorreccion++;
+        intentos++;
 
         unsigned long tCorr = millis();
         while (millis() - tCorr < 800)
@@ -308,26 +262,21 @@ void Movimiento::girarGrados(float grados)
         error = objetivoReal - rumbo;
     }
 
-    Serial.print("[GIRO] final. Antes=");
-    Serial.print(rumboInicial);
-    Serial.print(" Despues=");
-    Serial.print(rumbo);
-    Serial.print(" Delta=");
+    Serial.print("[GIRO] final delta=");
     Serial.print(rumbo - rumboInicial);
-    Serial.print(" | correcciones=");
-    Serial.println(intentosCorreccion);
+    Serial.print(" | corr=");
+    Serial.println(intentos);
 
     fijarRumbo();
 }
 
-// ==================== GIRO 180 ====================
-// Dos veces 90 + correccion intermedia con laterales
+// Giro 180 = dos veces 90
 void Movimiento::girar180()
 {
     girarGrados(90);
     delay(200);
 
-    // Corregir alineacion antes del segundo giro
+    // Corregir alineacion antes del segundo 90
     float dI = getDistanciaIzquierda();
     delay(30);
     float dD = getDistanciaDerecha();
@@ -350,7 +299,6 @@ void Movimiento::girar180()
                 if (dI <= 0 || dD <= 0)
                     break;
                 diff = dI - dD;
-
                 if (fabs(diff) < 2.0f)
                     break;
 
