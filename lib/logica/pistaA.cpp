@@ -1,180 +1,294 @@
 #include "logica.h"
 #include "config.h"
 
-// Locales
-#define TIEMPO_AVANCE_MAX_MS 2500
-#define COOLDOWN_COLOR_MS 3000
-#define TIEMPO_RETROCESO_MS 200
+enum class EstadoPista
+{
+    AVANZANDO,
+    CENTRANDO,
+    CONFIRMANDO_COLOR,
+    MOSTRANDO_COLOR,
+    RETROCESO_PRE_GIRO,
+    GIRANDO,
+    RECUPERANDO_ATASCO,
+    FIN
+};
 
-// Estado
-static unsigned long ultimoMostrarColor = 0;
+static EstadoPista estado = EstadoPista::AVANZANDO;
 
-// ==================== HELPERS ====================
-// Es color intermedio?
+static ColorDetectado colorPendiente = ColorDetectado::NINGUNO;
+static unsigned long tEstado = 0;
+static unsigned long ultimoColorAceptado = 0;
+static unsigned long tLed = 0;
+static int parpadeosRestantes = 0;
+static bool ledEncendido = false;
+static uint8_t reintentosAtasco = 0;
+
+static void cambiarEstado(EstadoPista nuevo)
+{
+    estado = nuevo;
+    tEstado = millis();
+}
+
 static bool esColorIntermedio(ColorDetectado c)
 {
     return c == COLOR_A_1 || c == COLOR_A_2 ||
            c == COLOR_A_3 || c == COLOR_A_4;
 }
 
-// Pared al frente? (2 de 3 lecturas)
-static bool hayParedFrente(Movimiento &mov, float umbral)
+static bool paredFrontalConfirmada(Movimiento &mov)
 {
-    int cuantos = 0;
-    for (int i = 0; i < 3; i++)
-    {
-        float d = mov.getDistanciaFrontal();
-        if (d > 0 && d < umbral)
-            cuantos++;
-        delay(15);
-    }
-    return cuantos >= 2;
+    float d1 = mov.getDistanciaFrontal();
+    float d2 = mov.getDistanciaFrontal();
+
+    bool p1 = d1 > 0 && d1 < DIST_FRENTE_PARADA_CM;
+    bool p2 = d2 > 0 && d2 < DIST_FRENTE_PARADA_CM;
+
+    return p1 && p2;
 }
 
-// Checar color: 0=seguir, 1=FIN, 2=mostrado
-static int checarColor(Movimiento &mov, SensorColor &color)
+static void iniciarParpadeo(ColorDetectado color)
 {
-    if (millis() - ultimoMostrarColor < COOLDOWN_COLOR_MS)
-        return 0;
-
-    ColorDetectado c = color.detectarColorNuevo();
-
-    if (c == COLOR_A_FINAL)
+    switch (color)
     {
-        Serial.println("[PISTA A] FIN!");
-        return 1;
+    case ColorDetectado::AZUL:
+        parpadeosRestantes = 1;
+        break;
+    case ColorDetectado::AMARILLO:
+        parpadeosRestantes = 2;
+        break;
+    case ColorDetectado::NARANJA:
+        parpadeosRestantes = 3;
+        break;
+    case ColorDetectado::ROSA:
+        parpadeosRestantes = 4;
+        break;
+    default:
+        parpadeosRestantes = 0;
+        return;
     }
 
-    if (esColorIntermedio(c))
-    {
-        Serial.print("[PISTA A] Color: ");
-        Serial.println((int)c);
-        mov.detener();
-        mostrarColor(c);
-        ultimoMostrarColor = millis();
-        return 2;
-    }
+    Serial.print(F("[LED] Color "));
+    Serial.print((int)color);
+    Serial.print(F(", parpadeos: "));
+    Serial.println(parpadeosRestantes);
 
-    return 0;
+    ledEncendido = false;
+    tLed = millis();
+    digitalWrite(LED_1, LOW);
 }
 
-// ==================== INIT ====================
+static void actualizarLED()
+{
+    if (parpadeosRestantes <= 0)
+        return;
+
+    unsigned long ahora = millis();
+
+    if (!ledEncendido && ahora - tLed >= LED_OFF_MS)
+    {
+        digitalWrite(LED_1, HIGH);
+        ledEncendido = true;
+        tLed = ahora;
+    }
+    else if (ledEncendido && ahora - tLed >= LED_ON_MS)
+    {
+        digitalWrite(LED_1, LOW);
+        ledEncendido = false;
+        tLed = ahora;
+        parpadeosRestantes--;
+    }
+}
+
 void pistaA_init(Movimiento &mov)
 {
-    Serial.println("[PISTA A] Iniciando MAZE...");
     mov.setVelocidad(VEL_AVANCE_PWM);
     mov.setVelocidadGiro(VEL_GIRO_PWM);
 
     pinMode(LED_1, OUTPUT);
-    apagarLEDs();
+    digitalWrite(LED_1, LOW);
 
-    ultimoMostrarColor = 0;
+    estado = EstadoPista::AVANZANDO;
+    tEstado = millis();
+    ultimoColorAceptado = 0;
+    colorPendiente = ColorDetectado::NINGUNO;
+    parpadeosRestantes = 0;
+    reintentosAtasco = 0;
+
+    mov.startForward();
 }
 
-// ==================== LOGICA PRINCIPAL ====================
 bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
 {
-    // Chequeo inicial de color
-    int r = checarColor(mov, color);
-    if (r == 1)
-    {
-        mov.detener();
-        return true;
-    }
-    if (r == 2)
-        return false;
+    mov.update();
+    actualizarLED();
 
-    // Avanzar
-    Serial.println("[PISTA A] Avanzando...");
-    unsigned long t0 = millis();
-    bool paredCerca = false;
+    unsigned long ahora = millis();
 
-    while (millis() - t0 < TIEMPO_AVANCE_MAX_MS)
+    switch (estado)
     {
-        r = checarColor(mov, color);
-        if (r == 1)
+
+    case EstadoPista::AVANZANDO:
+    {
+        ColorDetectado c = color.detectarColorEstable();
+
+        if (c == COLOR_A_FINAL)
         {
             mov.detener();
+            Serial.println(F("[PISTA A] ROJO detectado. FIN."));
+            cambiarEstado(EstadoPista::FIN);
             return true;
         }
-        if (r == 2)
-            return false;
 
-        // Pared cerca?
-        float dF = mov.getDistanciaFrontal();
-        if (dF > 0 && dF < DIST_FRENTE_PARADA_CM)
+        if (esColorIntermedio(c) &&
+            ahora - ultimoColorAceptado >= COLOR_COOLDOWN_MS)
         {
-            delay(30);
-            float dF2 = mov.getDistanciaFrontal();
-            if (dF2 > 0 && dF2 < DIST_FRENTE_PARADA_CM)
-            {
-                paredCerca = true;
-                break;
-            }
+            mov.detener();
+            colorPendiente = c;
+            ultimoColorAceptado = ahora;
+            iniciarParpadeo(c);
+            cambiarEstado(EstadoPista::MOSTRANDO_COLOR);
+            break;
         }
 
-        // Avanzar con correccion
-        float dI = mov.getDistanciaIzquierda();
-        float dD = mov.getDistanciaDerecha();
-        mov.avanzarConParedes(dI, dD);
+        if (mov.isStuck())
+        {
+            mov.detener();
+            Serial.println(F("[PISTA A] Atasco detectado."));
+            reintentosAtasco++;
 
-        delay(10);
+            if (reintentosAtasco > ATASCO_MAX_REINTENTOS)
+            {
+                Serial.println(F("[PISTA A] Demasiados atascos. FIN."));
+                cambiarEstado(EstadoPista::FIN);
+                return true;
+            }
+
+            mov.startBackwardMs(RETROCESO_ATASCO_MS);
+            cambiarEstado(EstadoPista::RECUPERANDO_ATASCO);
+            break;
+        }
+
+        if (paredFrontalConfirmada(mov))
+        {
+            mov.detener();
+            Serial.println(F("[PISTA A] Pared frontal. Centrando..."));
+            mov.startCentering();
+            cambiarEstado(EstadoPista::CENTRANDO);
+        }
+
+        break;
     }
 
-    mov.detener();
-    delay(200);
-
-    // Retroceder + girar
-    if (paredCerca && hayParedFrente(mov, DIST_FRENTE_PARADA_CM))
+    case EstadoPista::CENTRANDO:
     {
-        mov.retrocederTiempo(TIEMPO_RETROCESO_MS);
-        delay(200);
-        Serial.println("[PISTA A] -> Giro DERECHA");
-        mov.girarDerecha90();
+        if (mov.isManeuverDone() ||
+            ahora - tEstado >= CENTRADO_TIMEOUT_MS)
+        {
+            mov.detener();
+            Serial.println(F("[PISTA A] Centrado terminado."));
+            cambiarEstado(EstadoPista::CONFIRMANDO_COLOR);
+        }
+        break;
+    }
+
+    case EstadoPista::CONFIRMANDO_COLOR:
+    {
+        ColorDetectado c = color.detectarColorEstable();
+
+        if (c == COLOR_A_FINAL)
+        {
+            mov.detener();
+            Serial.println(F("[PISTA A] ROJO tras centrado. FIN."));
+            cambiarEstado(EstadoPista::FIN);
+            return true;
+        }
+
+        if (esColorIntermedio(c) &&
+            ahora - ultimoColorAceptado >= COLOR_COOLDOWN_MS)
+        {
+            colorPendiente = c;
+            ultimoColorAceptado = ahora;
+            iniciarParpadeo(c);
+            cambiarEstado(EstadoPista::MOSTRANDO_COLOR);
+            break;
+        }
+
+        mov.startBackwardMs(RETROCESO_PRE_GIRO_MS);
+        cambiarEstado(EstadoPista::RETROCESO_PRE_GIRO);
+        break;
+    }
+
+    case EstadoPista::MOSTRANDO_COLOR:
+    {
+        if (parpadeosRestantes <= 0)
+        {
+            mov.startBackwardMs(RETROCESO_PRE_GIRO_MS);
+            cambiarEstado(EstadoPista::RETROCESO_PRE_GIRO);
+        }
+        break;
+    }
+
+    case EstadoPista::RETROCESO_PRE_GIRO:
+    {
+        if (mov.isManeuverDone())
+        {
+            Serial.println(F("[PISTA A] Giro derecha 90 grados."));
+            mov.startTurn(90.0f);
+            cambiarEstado(EstadoPista::GIRANDO);
+        }
+        break;
+    }
+
+    case EstadoPista::GIRANDO:
+    {
+        if (mov.isManeuverDone())
+        {
+            mov.fijarRumbo();
+            Serial.println(F("[PISTA A] Giro completado. Avanzando."));
+            mov.startForward();
+            cambiarEstado(EstadoPista::AVANZANDO);
+        }
+        else if (ahora - tEstado >= GIRO_TIMEOUT_MS + 500)
+        {
+            mov.detener();
+            mov.fijarRumbo();
+            mov.startForward();
+            cambiarEstado(EstadoPista::AVANZANDO);
+        }
+        break;
+    }
+
+    case EstadoPista::RECUPERANDO_ATASCO:
+    {
+        if (mov.isManeuverDone())
+        {
+            Serial.println(F("[PISTA A] Reintentando avance."));
+            mov.startForward();
+            cambiarEstado(EstadoPista::AVANZANDO);
+        }
+        break;
+    }
+
+    case EstadoPista::FIN:
+        mov.detener();
+        return true;
     }
 
     return false;
 }
 
-// ==================== UTILIDADES ====================
-// Mostrar color (LED parpadeos)
 void mostrarColor(ColorDetectado color)
 {
-    int parpadeos;
+    iniciarParpadeo(color);
 
-    switch (color)
+    while (parpadeosRestantes > 0)
     {
-    case ColorDetectado::AZUL:
-        parpadeos = 1;
-        break;
-    case ColorDetectado::AMARILLO:
-        parpadeos = 2;
-        break;
-    case ColorDetectado::NARANJA:
-        parpadeos = 3;
-        break;
-    case ColorDetectado::ROSA:
-        parpadeos = 4;
-        break;
-    default:
-        return;
+        actualizarLED();
     }
-
-    Serial.print("[LED] Parpadeos: ");
-    Serial.println(parpadeos);
-
-    for (int i = 0; i < parpadeos; i++)
-    {
-        digitalWrite(LED_1, HIGH);
-        delay(LED_ON_MS);
-        digitalWrite(LED_1, LOW);
-        delay(LED_OFF_MS);
-    }
-
-    digitalWrite(LED_1, LOW);
 }
 
 void apagarLEDs()
 {
     digitalWrite(LED_1, LOW);
+    parpadeosRestantes = 0;
 }
