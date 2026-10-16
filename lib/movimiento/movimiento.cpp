@@ -116,7 +116,10 @@ void Movimiento::update()
 
         float dF = frontal.getDistanceCm();
 
-        if (dF > 0.0f)
+        // Solo chequear atasco si hay pared cercana al frente
+        bool paredCercana = (dF > 0.0f && dF < 40.0f);
+
+        if (paredCercana)
         {
             if (ultimaDistanciaFrontal < 0.0f ||
                 fabs(dF - ultimaDistanciaFrontal) >= ATASCO_DELTA_MIN_CM)
@@ -125,13 +128,20 @@ void Movimiento::update()
                 tUltimoProgreso = ahora;
                 atasco = false;
             }
-        }
 
-        if (ahora - tUltimoProgreso >= ATASCO_TIMEOUT_MS)
+            if (ahora - tUltimoProgreso >= ATASCO_TIMEOUT_MS)
+            {
+                atasco = true;
+                detener();
+                maniobra = Maniobra::NINGUNA;
+            }
+        }
+        else
         {
-            atasco = true;
-            detener();
-            maniobra = Maniobra::NINGUNA;
+            // Sin pared cercana: no puede haber atasco
+            ultimaDistanciaFrontal = dF;
+            tUltimoProgreso = ahora;
+            atasco = false;
         }
 
         break;
