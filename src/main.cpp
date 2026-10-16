@@ -6,7 +6,7 @@
 // Canal 3: Sensor de Piso
 // Canal 4: Sensor de Frente
 SensorColor sensorPiso(3);
-SensorColor sensorFrente(4);
+SensorColor sensorFrente(5);
 
 // Función auxiliar para imprimir el color detectado en texto legible
 const char *colorToString(ColorDetectado color)
