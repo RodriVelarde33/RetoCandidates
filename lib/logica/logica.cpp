@@ -3,19 +3,20 @@
 
 #define DIST_PARED 20.0
 
-// ==================== INICIALIZACIÓN ====================
+// Init pista A
 void pistaA_init(Movimiento &mov)
 {
     Serial.println("[PISTA A] Inicializando MAZE...");
     mov.setVelocidad(130);
 }
 
-// ==================== LÓGICA PRINCIPAL ====================
+// Logica principal
 bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
 {
-    // ============ 1. LEER COLOR ============
+    // Leer color
     ColorDetectado c = color.detectarColorNuevo();
 
+    // Color intermedio -> mostrar
     if (c == COLOR_A_1 || c == COLOR_A_2 ||
         c == COLOR_A_3 || c == COLOR_A_4)
     {
@@ -25,6 +26,7 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
         return false;
     }
 
+    // Rojo -> fin
     if (c == COLOR_A_FINAL)
     {
         Serial.println("[PISTA A] Checkpoint final alcanzado!");
@@ -32,11 +34,12 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
         return true;
     }
 
-    // ============ 2. LEER ULTRASÓNICOS ============
+    // Leer ultrasonicos
     float dFrente = mov.getDistanciaFrontal();
     float dDer = mov.getDistanciaDerecha();
     float dIzq = mov.getDistanciaIzquierda();
 
+    // Sin eco = 999 (libre)
     if (dFrente < 0)
         dFrente = 999;
     if (dDer < 0)
@@ -48,13 +51,14 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
     bool paredDer = (dDer < DIST_PARED);
     bool paredIzq = (dIzq < DIST_PARED);
 
-    // ============ 3. DECIDIR MOVIMIENTO ============
+    // Decidir
     if (!paredFrente)
     {
         mov.avanzar();
     }
     else if (paredFrente && !paredDer)
     {
+        // Pared al frente, derecha libre -> girar derecha
         Serial.println("[PISTA A] Giro derecha");
         mov.detener();
         delay(150);
@@ -62,6 +66,7 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
     }
     else if (paredFrente && paredDer && !paredIzq)
     {
+        // Frente y derecha tapados -> girar izquierda
         Serial.println("[PISTA A] Giro izquierda");
         mov.detener();
         delay(150);
@@ -69,6 +74,7 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
     }
     else
     {
+        // Todo tapado -> 180
         Serial.println("[PISTA A] Giro 180");
         mov.detener();
         delay(150);
@@ -78,7 +84,7 @@ bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
     return false;
 }
 
-// ==================== UTILIDADES ====================
+// Mostrar color
 void mostrarColor(ColorDetectado color)
 {
     Serial.print("[COLOR] Mostrando: ");
@@ -86,7 +92,8 @@ void mostrarColor(ColorDetectado color)
     delay(3000);
 }
 
+// Apagar LEDs
 void apagarLEDs()
 {
-    // TODO: cuando tengas LEDs, apágalos aquí
+    // TODO: cuando tengas LEDs
 }

@@ -4,25 +4,25 @@
 #include <Arduino.h>
 #include "../SensorDeColor/sensorColor.h"
 
-// ==================== LEDs ====================
+// LED
 #define LED_1 51
 #define LED_ON_MS 200
 #define LED_OFF_MS 200
 
-// ==================== COLORES ====================
+// Colores de la pista
 #define COLOR_A_1 ColorDetectado::AZUL
 #define COLOR_A_2 ColorDetectado::AMARILLO
 #define COLOR_A_3 ColorDetectado::NARANJA
 #define COLOR_A_4 ColorDetectado::ROSA
 #define COLOR_A_FINAL ColorDetectado::ROJO
 
-// ==================== GEOMETRIA (cm) ====================
+// Distancias (cm)
 #define DIST_LATERAL_IDEAL_CM 6.0f
 #define DIST_PARED_LATERAL_CM 15.0f
 #define DIST_FRENTE_ALTO_CM 15.0f
 #define DIST_CENTRAR_CM 21.0f
 
-// ==================== VELOCIDADES ====================
+// Velocidades
 #define VEL_AVANCE_PWM 120
 #define VEL_GIRO_PWM 120
 #define VEL_GIRO_MIN_PWM 100
@@ -30,7 +30,7 @@
 #define VEL_AVANCE_CM_S 20.0f
 #define TIEMPO_CENTRAR_MS ((unsigned long)(1000.0f * DIST_CENTRAR_CM / VEL_AVANCE_CM_S))
 
-// ==================== CONTROL ====================
+// Control
 #define TRIM_REAL_IZQ 1.0f
 #define TRIM_REAL_DER 1.05f
 
