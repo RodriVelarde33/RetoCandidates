@@ -35,9 +35,6 @@ void PuenteH::izquierdaAdelante(uint8_t velocidad)
 
 void PuenteH::izquierdaAtras(uint8_t velocidad)
 {
-    analogWrite(ena, velocidad);
-    digitalWrite(in1, LOW);
-    digitalWrite(in2, HIGH);
 }
 
 void PuenteH::detenerIzquierda()
