@@ -45,6 +45,9 @@ Movimiento::Movimiento(PuenteH &puente,
 // Init + calibrar giroscopio
 bool Movimiento::begin()
 {
+    Wire.begin(); // I2C
+    delay(50);
+
     puente.begin();
     frontal.begin();
     izquierdo.begin();
@@ -107,11 +110,15 @@ float Movimiento::getDistanciaFrontal() { return frontal.getDistanceCm(); }
 float Movimiento::getDistanciaIzquierda() { return izquierdo.getDistanceCm(); }
 float Movimiento::getDistanciaDerecha() { return derecho.getDistanceCm(); }
 
-// Leer los 3 en secuencia (sin eco = 999)
+// Leer los 3 en secuencia, con promedio en el frontal (sin eco = 999)
 void Movimiento::leerDistancias(float &f, float &i, float &d)
 {
-    f = frontal.getDistanceCm();
+    // Promedio de 2 lecturas del frontal (filtra ruido)
+    float f1 = frontal.getDistanceCm();
     delay(8);
+    float f2 = frontal.getDistanceCm();
+    f = (f1 + f2) / 2.0f;
+
     d = derecho.getDistanceCm();
     delay(8);
     i = izquierdo.getDistanceCm();
@@ -132,7 +139,8 @@ void Movimiento::actualizarRumbo()
     float dt = (ahora - tRumbo) / 1000.0f;
     tRumbo = ahora;
 
-    if (dt > 0.5f)
+    // Si paso mucho tiempo sin actualizar, descarta (evita saltos)
+    if (dt > 0.3f)
         return;
 
     if (!giro.actualizar())
@@ -152,17 +160,6 @@ void Movimiento::fijarRumbo()
 {
     tRumbo = millis();
     rumboObjetivo = rumbo;
-}
-
-// Esperar sin perder lecturas del giroscopio
-void Movimiento::esperarActualizando(unsigned long ms)
-{
-    unsigned long t0 = millis();
-    while (millis() - t0 < ms)
-    {
-        actualizarRumbo();
-        delay(5);
-    }
 }
 
 // ==================== AVANZAR RECTO ====================
@@ -190,13 +187,12 @@ void Movimiento::avanzarConParedes(float dIzq, float dDer)
 
     int corr = (int)constrain(KP_RUMBO * err, -CORR_MAX, CORR_MAX);
 
+    // Limitar correccion a 50% de la velocidad (evita giros bruscos)
+    int corrMax = velocidad / 2;
+    corr = constrain(corr, -corrMax, corrMax);
+
     // corr > 0 -> rueda izq más rápida -> gira derecha
     mover(max(0, velocidad + corr), max(0, velocidad - corr));
-}
-
-void Movimiento::avanzarRecto()
-{
-    avanzarConParedes(999, 999);
 }
 
 // ==================== GIRO CON CORRECCION ====================
@@ -223,14 +219,16 @@ void Movimiento::girarGrados(float grados)
     else
         objetivo = rumboInicial + grados + anticipo;
 
-    Serial.print("[GIRO] pedido: ");
+    Serial.print("[GIRO] pedido=");
     Serial.print(grados);
-    Serial.print(" | objetivo: ");
-    Serial.println(objetivo);
+    Serial.print(" | objetivo=");
+    Serial.print(objetivo);
+    Serial.print(" | rumboIni=");
+    Serial.println(rumboInicial);
 
     // FASE 1: GIRAR
     unsigned long tInicio = millis();
-    const unsigned long tMax = 4000;
+    const unsigned long tMax = 5000;
     bool objetivoAlcanzado = false;
 
     while (millis() - tInicio < tMax)
@@ -265,20 +263,16 @@ void Movimiento::girarGrados(float grados)
 
     if (!objetivoAlcanzado)
     {
-        Serial.println("[AVISO] Giro: no se alcanzo el objetivo en la fase inicial; se intentara corregir.");
+        Serial.println("[AVISO] Giro: no alcanzo objetivo en fase 1, se corrige.");
     }
 
-    float objetivoReal;
-    if (grados > 0)
-        objetivoReal = rumboInicial + grados;
-    else
-        objetivoReal = rumboInicial + grados;
-
+    // Objetivo real (sin anticipo)
+    float objetivoReal = rumboInicial + grados;
     float error = objetivoReal - rumbo;
 
-    Serial.print("[GIRO] real: ");
+    Serial.print("[GIRO] real=");
     Serial.print(rumbo - rumboInicial);
-    Serial.print(" | error: ");
+    Serial.print(" | error=");
     Serial.println(error);
 
     // FASE 2: CORREGIR
@@ -314,19 +308,64 @@ void Movimiento::girarGrados(float grados)
         error = objetivoReal - rumbo;
     }
 
-    Serial.print("[GIRO] final: ");
+    Serial.print("[GIRO] final. Antes=");
+    Serial.print(rumboInicial);
+    Serial.print(" Despues=");
+    Serial.print(rumbo);
+    Serial.print(" Delta=");
     Serial.print(rumbo - rumboInicial);
-    Serial.print(" | correcciones: ");
+    Serial.print(" | correcciones=");
     Serial.println(intentosCorreccion);
 
     fijarRumbo();
 }
 
 // ==================== GIRO 180 ====================
-// Dos veces 90, para que sea mas preciso
+// Dos veces 90 + correccion intermedia con laterales
 void Movimiento::girar180()
 {
     girarGrados(90);
     delay(200);
+
+    // Corregir alineacion antes del segundo giro
+    float dI = getDistanciaIzquierda();
+    delay(30);
+    float dD = getDistanciaDerecha();
+    delay(30);
+
+    if (dI > 0 && dI < DIST_PARED_LATERAL_CM &&
+        dD > 0 && dD < DIST_PARED_LATERAL_CM)
+    {
+        float diff = dI - dD;
+        if (fabs(diff) > 2.0f)
+        {
+            unsigned long tAlinea = millis();
+            while (millis() - tAlinea < 500)
+            {
+                dI = getDistanciaIzquierda();
+                delay(20);
+                dD = getDistanciaDerecha();
+                delay(20);
+
+                if (dI <= 0 || dD <= 0)
+                    break;
+                diff = dI - dD;
+
+                if (fabs(diff) < 2.0f)
+                    break;
+
+                if (diff < 0)
+                    mover(velocidadGiro / 2, -velocidadGiro / 2);
+                else
+                    mover(-velocidadGiro / 2, velocidadGiro / 2);
+
+                delay(30);
+            }
+            detener();
+            delay(100);
+        }
+    }
+
     girarGrados(90);
+    delay(200);
 }
