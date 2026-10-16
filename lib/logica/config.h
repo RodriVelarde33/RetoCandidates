@@ -69,4 +69,12 @@
 #define ATASCO_TIMEOUT_MS 3000
 #define ATASCO_DELTA_MIN_CM 1.0f
 
+// ===== PISTA B =====
+
+// Garra
+#define GARRA_MOVER_MS        900   // tiempo que tarda el servo en moverse
+
+// Velocidad lenta para no mover la pelota
+#define VEL_S1_PWM            40    // lo ajustas probando
+
 #endif

@@ -45,6 +45,7 @@ enum EstadoGlobal
 {
     CALIBRACION,
     EJECUTANDO_PISTA_A,
+    EJECUTANDO_PISTA_B,
     FIN_RONDA
 };
 EstadoGlobal estadoGlobal = CALIBRACION;
@@ -84,7 +85,7 @@ void loop()
 {
     unsigned long ahora = millis();
 
-    if (estadoGlobal == EJECUTANDO_PISTA_A &&
+    if ((estadoGlobal == EJECUTANDO_PISTA_A || estadoGlobal == EJECUTANDO_PISTA_B)&&
         ahora - tiempoInicioRonda >= TIEMPO_RONDA_MS)
     {
         estadoGlobal = FIN_RONDA;
@@ -110,6 +111,15 @@ void loop()
             Serial.println(F(">>> FIN <<<"));
         }
         break;
+
+    case EJECUTANDO_PISTA_B:
+    if (pistaB_ejecutar(movimiento, colorAbajo, garra))
+    {
+        estadoGlobal = FIN_RONDA;
+        Serial.println(F(">>> FIN <<<"));
+    }
+    break;
+    
 
     case FIN_RONDA:
         movimiento.detener();
