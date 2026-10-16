@@ -9,7 +9,7 @@
 #include "sensorUltrasonico.h"
 #include "moduloPuenteH.h"
 
-// ==================== PINES ====================
+// Pines
 #define PIN_IN1 8
 #define PIN_IN2 9
 #define PIN_IN3 10
@@ -27,13 +27,11 @@
 #define CANAL_COLOR_ABAJO 3
 #define PIN_SERVO_GARRA 7
 
-// ==================== INSTANCIAS ====================
+// Instancias
 PuenteH puente(PIN_IN1, PIN_IN2, PIN_ENA, PIN_IN3, PIN_IN4, PIN_ENB);
-
 SensorUltrasonico ultrasonicoFrontal(PIN_TRIG_FRONTAL, PIN_ECHO_FRONTAL);
 SensorUltrasonico ultrasonicoIzq(PIN_TRIG_IZQ, PIN_ECHO_IZQ);
 SensorUltrasonico ultrasonicoDer(PIN_TRIG_DER, PIN_ECHO_DER);
-
 SensorColor colorAbajo(CANAL_COLOR_ABAJO);
 SensorGiro giroscopio(0x70, 2, 0x68);
 Garra garra(PIN_SERVO_GARRA);
@@ -46,7 +44,7 @@ Movimiento movimiento(puente,
                       garra,
                       giroscopio);
 
-// ==================== ESTADOS ====================
+// Estados
 enum EstadoGlobal
 {
     CALIBRACION,
@@ -59,7 +57,7 @@ unsigned long tiempoInicioRonda = 0;
 const unsigned long TIEMPO_CALIBRACION = 3000;
 const unsigned long TIEMPO_RONDA = 480000;
 
-// ==================== SETUP ====================
+// Setup
 void setup()
 {
     Serial.begin(115200);
@@ -69,26 +67,29 @@ void setup()
     Wire.begin();
     puente.setFactores(1.0, 1.0);
 
-    Serial.println("Inicializando movimiento...");
-    const bool movimientoListo = movimiento.begin();
+    Serial.println("Init movimiento...");
+    bool movimientoOK = movimiento.begin();
 
-    Serial.println("Inicializando garra...");
+    Serial.println("Init garra...");
     garra.inicializar(0, 90);
 
     tiempoInicioRonda = millis();
-    if (!movimientoListo)
+
+    if (!movimientoOK)
     {
         estadoGlobal = FIN_RONDA;
-        Serial.println("[ERROR] Robot detenido: revisa MPU6050, TCA9548A, SDA/SCL y alimentacion.");
+        Serial.println("[ERROR] MPU6050 no responde. Revisa I2C.");
         movimiento.detener();
         return;
     }
-    Serial.println("Listo. Iniciando Pista A en 3 segundos...");
+
+    Serial.println("Listo. Iniciando Pista A...");
 }
 
-// ==================== LOOP ====================
+// Loop
 void loop()
 {
+    // Timeout de ronda
     if (estadoGlobal == EJECUTANDO_PISTA_A)
     {
         if (millis() - tiempoInicioRonda >= TIEMPO_RONDA)
