@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+// Colores detectables
 enum class ColorDetectado
 {
     NINGUNO,
@@ -30,7 +31,7 @@ public:
     void begin();
     ColorDetectado detectarColorNuevo();
 
-    // Valores crudos (clear, rojo, verde, azul) para calibrar umbrales.
+    // Lectura cruda C,R,G,B
     void leerRaw(uint16_t &c, uint16_t &r, uint16_t &g, uint16_t &b);
 };
 

@@ -1,5 +1,6 @@
 #include "moduloPuenteH.h"
 
+// Constructor: swap porque motores estan invertidos fisicamente
 PuenteH::PuenteH(uint8_t in1, uint8_t in2, uint8_t ena,
                  uint8_t in3, uint8_t in4, uint8_t enb)
 {
@@ -12,6 +13,7 @@ PuenteH::PuenteH(uint8_t in1, uint8_t in2, uint8_t ena,
     this->enb = ena;
 }
 
+// Init pines
 void PuenteH::begin()
 {
     pinMode(ena, OUTPUT);
@@ -29,12 +31,14 @@ void PuenteH::begin()
     digitalWrite(in4, LOW);
 }
 
+// Compensacion de motores
 void PuenteH::setFactores(float izq, float der)
 {
     factorIzq = izq;
     factorDer = der;
 }
 
+// Motor izquierdo adelante
 void PuenteH::izquierdaAdelante(uint8_t velocidad)
 {
     analogWrite(ena, (uint8_t)(velocidad * factorIzq));
@@ -42,6 +46,7 @@ void PuenteH::izquierdaAdelante(uint8_t velocidad)
     digitalWrite(in2, LOW);
 }
 
+// Motor izquierdo atras
 void PuenteH::izquierdaAtras(uint8_t velocidad)
 {
     analogWrite(ena, (uint8_t)(velocidad * factorIzq));
@@ -49,6 +54,7 @@ void PuenteH::izquierdaAtras(uint8_t velocidad)
     digitalWrite(in2, HIGH);
 }
 
+// Parar motor izquierdo
 void PuenteH::detenerIzquierda()
 {
     analogWrite(ena, 0);
@@ -56,6 +62,7 @@ void PuenteH::detenerIzquierda()
     digitalWrite(in2, LOW);
 }
 
+// Motor derecho adelante
 void PuenteH::derechaAdelante(uint8_t velocidad)
 {
     analogWrite(enb, (uint8_t)(velocidad * factorDer));
@@ -63,6 +70,7 @@ void PuenteH::derechaAdelante(uint8_t velocidad)
     digitalWrite(in4, LOW);
 }
 
+// Motor derecho atras
 void PuenteH::derechaAtras(uint8_t velocidad)
 {
     analogWrite(enb, (uint8_t)(velocidad * factorDer));
@@ -70,6 +78,7 @@ void PuenteH::derechaAtras(uint8_t velocidad)
     digitalWrite(in4, HIGH);
 }
 
+// Parar motor derecho
 void PuenteH::detenerDerecha()
 {
     analogWrite(enb, 0);
@@ -77,6 +86,7 @@ void PuenteH::detenerDerecha()
     digitalWrite(in4, LOW);
 }
 
+// Parar todo
 void PuenteH::detener()
 {
     analogWrite(ena, 0);

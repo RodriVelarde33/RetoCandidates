@@ -1,5 +1,6 @@
 #include "sensorColor.h"
 
+// Registros TCS34725
 #define TCS34725_COMMAND_BIT 0x80
 #define TCS34725_ENABLE 0x00
 #define TCS34725_ATIME 0x01
@@ -10,6 +11,7 @@
 #define TCS34725_GDATAL 0x18
 #define TCS34725_BDATAL 0x1A
 
+// Selecciona canal del multiplexor
 void SensorColor::seleccionarCanal(uint8_t canal)
 {
     Wire.beginTransmission(0x70);
@@ -17,6 +19,7 @@ void SensorColor::seleccionarCanal(uint8_t canal)
     Wire.endTransmission();
 }
 
+// Escribe registro
 void SensorColor::escribirRegistro(uint8_t reg, uint8_t valor)
 {
     Wire.beginTransmission(direccionI2C);
@@ -25,6 +28,7 @@ void SensorColor::escribirRegistro(uint8_t reg, uint8_t valor)
     Wire.endTransmission();
 }
 
+// Lee 16 bits (low + high)
 uint16_t SensorColor::leer16bits(uint8_t reg)
 {
     Wire.beginTransmission(direccionI2C);
@@ -40,18 +44,21 @@ uint16_t SensorColor::leer16bits(uint8_t reg)
     return 0;
 }
 
+// Constructor
 SensorColor::SensorColor(uint8_t canal) : canalMultiplexor(canal) {}
 
+// Init sensor
 void SensorColor::begin()
 {
     seleccionarCanal(canalMultiplexor);
-    escribirRegistro(TCS34725_ENABLE, 0x01);
+    escribirRegistro(TCS34725_ENABLE, 0x01); // power on
     delay(3);
-    escribirRegistro(TCS34725_ENABLE, 0x03);
-    escribirRegistro(TCS34725_ATIME, 0xEB);
-    escribirRegistro(TCS34725_CONTROL, 0x01);
+    escribirRegistro(TCS34725_ENABLE, 0x03);  // RGBC enable
+    escribirRegistro(TCS34725_ATIME, 0xEB);   // 50ms
+    escribirRegistro(TCS34725_CONTROL, 0x01); // gain 4x
 }
 
+// Lee valores crudos C,R,G,B
 void SensorColor::leerRaw(uint16_t &c, uint16_t &r, uint16_t &g, uint16_t &b)
 {
     seleccionarCanal(canalMultiplexor);
@@ -61,6 +68,7 @@ void SensorColor::leerRaw(uint16_t &c, uint16_t &r, uint16_t &g, uint16_t &b)
     b = leer16bits(TCS34725_BDATAL);
 }
 
+// Clasifica color con umbrales
 ColorDetectado SensorColor::detectarColorNuevo()
 {
     uint16_t c, r, g, b;

@@ -4,6 +4,7 @@
 
 static const bool PUENTE_CON_SWAP = true;
 
+// Aplica velocidad a un lado del puente
 static void aplicar(PuenteH &p, bool ladoLogicoIzq, int v)
 {
     if (ladoLogicoIzq)
@@ -22,6 +23,7 @@ static void aplicar(PuenteH &p, bool ladoLogicoIzq, int v)
     }
 }
 
+// Constructor
 Movimiento::Movimiento(PuenteH &puente,
                        SensorUltrasonico &frontal,
                        SensorUltrasonico &izquierdo,
@@ -40,6 +42,7 @@ Movimiento::Movimiento(PuenteH &puente,
     tRumbo = 0;
 }
 
+// Init + calibrar giroscopio
 bool Movimiento::begin()
 {
     puente.begin();
@@ -47,6 +50,8 @@ bool Movimiento::begin()
     izquierdo.begin();
     derecho.begin();
     colorFrontal.begin();
+
+    // MPU6050 responde?
     if (!giro.begin())
     {
         Serial.println("[ERROR] MPU6050 no responde por I2C/multiplexor.");
@@ -54,6 +59,7 @@ bool Movimiento::begin()
         return false;
     }
 
+    // Calibrar offset (robot quieto)
     Serial.println("[CALIB] Calibrando giroscopio...");
     float suma = 0;
     for (int i = 0; i < 100; i++)
@@ -101,6 +107,7 @@ float Movimiento::getDistanciaFrontal() { return frontal.getDistanceCm(); }
 float Movimiento::getDistanciaIzquierda() { return izquierdo.getDistanceCm(); }
 float Movimiento::getDistanciaDerecha() { return derecho.getDistanceCm(); }
 
+// Leer los 3 en secuencia (sin eco = 999)
 void Movimiento::leerDistancias(float &f, float &i, float &d)
 {
     f = frontal.getDistanceCm();
@@ -118,6 +125,7 @@ void Movimiento::leerDistancias(float &f, float &i, float &d)
 }
 
 // ==================== GIROSCOPIO ====================
+// Integra velocidad angular en rumbo
 void Movimiento::actualizarRumbo()
 {
     unsigned long ahora = millis();
@@ -131,18 +139,22 @@ void Movimiento::actualizarRumbo()
         return;
 
     float gz = (giro.getGiroZ() - offsetGiroZ) * SIGNO_GIRO;
+
+    // Deadzone anti-ruido
     if (fabs(gz) < 0.3f)
         gz = 0;
 
     rumbo += gz * dt;
 }
 
+// El rumbo actual es el que quiero mantener
 void Movimiento::fijarRumbo()
 {
     tRumbo = millis();
     rumboObjetivo = rumbo;
 }
 
+// Esperar sin perder lecturas del giroscopio
 void Movimiento::esperarActualizando(unsigned long ms)
 {
     unsigned long t0 = millis();
@@ -154,6 +166,7 @@ void Movimiento::esperarActualizando(unsigned long ms)
 }
 
 // ==================== AVANZAR RECTO ====================
+// Recto con rumbo fijo + centrado con paredes
 void Movimiento::avanzarConParedes(float dIzq, float dDer)
 {
     actualizarRumbo();
@@ -161,6 +174,7 @@ void Movimiento::avanzarConParedes(float dIzq, float dDer)
     bool hayIzq = (dIzq > 0 && dIzq < DIST_PARED_LATERAL_CM);
     bool hayDer = (dDer > 0 && dDer < DIST_PARED_LATERAL_CM);
 
+    // errLat > 0 -> pegado a la izq -> ir a la derecha
     float errLat = 0;
     if (hayIzq && hayDer)
         errLat = (dDer - dIzq) / 2.0f;
@@ -169,12 +183,14 @@ void Movimiento::avanzarConParedes(float dIzq, float dDer)
     else if (hayDer)
         errLat = dDer - DIST_LATERAL_IDEAL_CM;
 
+    // Las paredes solo inclinan un poco el rumbo
     float ajuste = constrain(KP_PARED_GRADOS * errLat,
                              -MAX_AJUSTE_RUMBO, MAX_AJUSTE_RUMBO);
     float err = (rumboObjetivo + ajuste) - rumbo;
 
     int corr = (int)constrain(KP_RUMBO * err, -CORR_MAX, CORR_MAX);
 
+    // corr > 0 -> rueda izq más rápida -> gira derecha
     mover(max(0, velocidad + corr), max(0, velocidad - corr));
 }
 
@@ -183,7 +199,7 @@ void Movimiento::avanzarRecto()
     avanzarConParedes(999, 999);
 }
 
-// ==================== GIRO CON CORRECCION POST-GIRO ====================
+// ==================== GIRO CON CORRECCION ====================
 void Movimiento::girarGrados(float grados)
 {
     detener();
@@ -192,6 +208,7 @@ void Movimiento::girarGrados(float grados)
     actualizarRumbo();
     float rumboInicial = rumbo;
 
+    // Anticipo para compensar inercia
     float anticipo = 0;
     if (fabs(grados) >= 150.0f)
         anticipo = 5.0f;
@@ -233,7 +250,7 @@ void Movimiento::girarGrados(float grados)
         else
             v = velocidadGiro;
 
-        // El signo del error indica hacia dónde debe corregirse el rumbo.
+        // err > 0 -> falta girar a la derecha
         if (err > 0)
             mover(-v, v);
         else
@@ -306,6 +323,7 @@ void Movimiento::girarGrados(float grados)
 }
 
 // ==================== GIRO 180 ====================
+// Dos veces 90, para que sea mas preciso
 void Movimiento::girar180()
 {
     girarGrados(90);

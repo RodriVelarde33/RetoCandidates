@@ -9,6 +9,7 @@ private:
     uint8_t in1, in2, ena;
     uint8_t in3, in4, enb;
 
+    // Compensacion de motores
     float factorIzq = 1.0;
     float factorDer = 1.0;
 
@@ -19,11 +20,15 @@ public:
     void begin();
     void setFactores(float izq, float der);
 
+    // Motor izquierdo
     void izquierdaAdelante(uint8_t velocidad);
     void izquierdaAtras(uint8_t velocidad);
+
+    // Motor derecho
     void derechaAdelante(uint8_t velocidad);
     void derechaAtras(uint8_t velocidad);
 
+    // Parar
     void detenerIzquierda();
     void detenerDerecha();
     void detener();

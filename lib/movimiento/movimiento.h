@@ -39,23 +39,28 @@ public:
 
     bool begin();
 
+    // Motores
     void mover(int vIzqReal, int vDerReal);
     void avanzar();
     void retroceder();
     void detener();
 
+    // Ultrasonicos
     float getDistanciaFrontal();
     float getDistanciaIzquierda();
     float getDistanciaDerecha();
     void leerDistancias(float &frente, float &izq, float &der);
 
+    // Giroscopio
     void actualizarRumbo();
     void fijarRumbo();
     float getRumbo() { return rumbo; }
 
+    // Avance
     void avanzarConParedes(float dIzq, float dDer);
     void avanzarRecto();
 
+    // Giros
     void girarGrados(float grados);
     void girarDerecha90() { girarGrados(90); }
     void girarIzquierda90() { girarGrados(-90); }
