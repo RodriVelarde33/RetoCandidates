@@ -6,9 +6,11 @@ dependiendo de la situacion.
 #include "movimiento.h"
 
 // Constructor
-Movimiento::Movimiento(PuenteH &puente,SensorUltrasonico &frontal)
+Movimiento::Movimiento(PuenteH &puente,SensorUltrasonico &frontal, SensorColor &colorFrontal, Garra &garra)
     : puente(puente),
-      frontal(frontal)
+      frontal(frontal),
+      colorFrontal(colorFrontal),
+      garra(garra)
 
 {
     velocidad = 100;
@@ -19,6 +21,7 @@ void Movimiento::begin()
 {
     puente.begin();
     frontal.begin();
+    colorFrontal.begin();
 
     detener();
 }
@@ -67,5 +70,22 @@ void Movimiento::actualizar()
     else
     {
         avanzar();
+    }
+
+    if (colorFrontal.detectarColorNuevo() == ColorDetectado::NARANJA)
+    {
+        detener();
+        delay(1000); // Esperar 1 segundo
+        retroceder();
+        delay(1000); // Retroceder durante 1 segundo
+        detener();
+        delay(500)
+        garra.abrir();
+        delay(1000); // Esperar 1 segundo
+        avanzar();
+        delay(1000); // Avanzar durante 1 segundo
+        detener();
+        garra.cerrar();
+
     }
 }

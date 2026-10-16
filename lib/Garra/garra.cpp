@@ -1,27 +1,29 @@
-/* Aqui ira la logica de la garra del robot,si los sensores como el de color y el aproximidad nos dicen que podria estar la pelota cerca entonces
-se llamara a este objeto y usaremos algunas de sus funciones como cerrar o abrir garra, ademas tambien le pondre una verificacion que si detecta algo dentro de la garra
-*/
 
 #include <Arduino.h>
 #include "garra.h"
 
-Garra::Garra()
+Garra::Garra(uint8_t pinServo)
 {
+    this->pinServo = pinServo;
 }
 
-void Garra::inicializar()
+// Inicializar la garra con los ángulos de apertura y cierre
+void Garra::inicializar(int anguloAbierta, int anguloCerrada)
 {
-    servo.attach(PIN_SERVO);
+    this->anguloAbierta = anguloAbierta;
+    this->anguloCerrada = anguloCerrada;
+
+    servo.attach(pinServo);
     abrir();
 }
 
 void Garra::abrir()
 {
-    servo.write(ANGULO_ABIERTA);
+    servo.write(anguloAbierta);
 }
 
 void Garra::cerrar()
 {
-    servo.write(ANGULO_CERRADA);
+    servo.write(anguloCerrada);
     delay(400);
 }
