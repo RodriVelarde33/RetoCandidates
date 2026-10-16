@@ -4,42 +4,34 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-// Definición de colores detectados
-enum ColorDetectado
+enum class ColorDetectado
 {
     NINGUNO,
-    CIAN,
-    AMARILLO,
     NARANJA,
-    MAGENTA
-};
-
-// Estructura para las referencias de color
-struct ReferenciaColor
-{
-    float r;
-    float g;
-    float b;
+    ROJO,
+    AZUL,
+    VERDE,
+    AMARILLO,
+    ROSA
 };
 
 class SensorColor
 {
 private:
-    uint8_t direccion;
-    uint8_t canalMUX;
-    ColorDetectado ultimoColorReportado;
+    uint8_t canalMultiplexor;
+    const uint8_t direccionI2C = 0x29;
 
-    void seleccionarCanal();
-    void escribirRegistro(uint8_t registro, uint8_t valor);
-    uint16_t leerRegistro16(uint8_t registro);
-    float distancia(float r, float g, float b, ReferenciaColor ref);
+    void seleccionarCanal(uint8_t canal);
+    void escribirRegistro(uint8_t reg, uint8_t valor);
+    uint16_t leer16bits(uint8_t reg);
 
 public:
     SensorColor(uint8_t canal);
-    bool begin();
-    void leerRGBNormalizado(float &r, float &g, float &b);
-    ColorDetectado leerColorActual();
+    void begin();
     ColorDetectado detectarColorNuevo();
+
+    // Valores crudos (clear, rojo, verde, azul) para calibrar umbrales.
+    void leerRaw(uint16_t &c, uint16_t &r, uint16_t &g, uint16_t &b);
 };
 
 #endif

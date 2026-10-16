@@ -14,46 +14,58 @@ PuenteH::PuenteH(uint8_t in1, uint8_t in2, uint8_t ena,
 
 void PuenteH::begin()
 {
-    // Configurar pines
-    //Motor izquierdo
     pinMode(ena, OUTPUT);
     pinMode(in1, OUTPUT);
     pinMode(in2, OUTPUT);
-
-    // Motor derecho
     pinMode(enb, OUTPUT);
     pinMode(in3, OUTPUT);
     pinMode(in4, OUTPUT);
+
+    digitalWrite(ena, LOW);
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, LOW);
+    digitalWrite(enb, LOW);
+    digitalWrite(in3, LOW);
+    digitalWrite(in4, LOW);
+}
+
+void PuenteH::setFactores(float izq, float der)
+{
+    factorIzq = izq;
+    factorDer = der;
 }
 
 void PuenteH::izquierdaAdelante(uint8_t velocidad)
 {
-    analogWrite(ena, velocidad);
+    analogWrite(ena, (uint8_t)(velocidad * factorIzq));
     digitalWrite(in1, HIGH);
     digitalWrite(in2, LOW);
 }
 
 void PuenteH::izquierdaAtras(uint8_t velocidad)
 {
+    analogWrite(ena, (uint8_t)(velocidad * factorIzq));
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, HIGH);
 }
 
 void PuenteH::detenerIzquierda()
 {
-   analogWrite(ena, 0);
-   digitalWrite(in1, LOW);
-digitalWrite(in2, LOW);
+    analogWrite(ena, 0);
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, LOW);
 }
 
 void PuenteH::derechaAdelante(uint8_t velocidad)
 {
-    analogWrite(enb, velocidad);
+    analogWrite(enb, (uint8_t)(velocidad * factorDer));
     digitalWrite(in3, HIGH);
     digitalWrite(in4, LOW);
 }
 
 void PuenteH::derechaAtras(uint8_t velocidad)
 {
-    analogWrite(enb, velocidad);
+    analogWrite(enb, (uint8_t)(velocidad * factorDer));
     digitalWrite(in3, LOW);
     digitalWrite(in4, HIGH);
 }
@@ -67,14 +79,10 @@ void PuenteH::detenerDerecha()
 
 void PuenteH::detener()
 {
-    // Velocidad 0
     analogWrite(ena, 0);
     analogWrite(enb, 0);
-
-    // Desactivar señales de direccion
     digitalWrite(in1, LOW);
     digitalWrite(in2, LOW);
-
     digitalWrite(in3, LOW);
     digitalWrite(in4, LOW);
 }

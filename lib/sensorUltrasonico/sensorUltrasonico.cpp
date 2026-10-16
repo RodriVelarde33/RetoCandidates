@@ -1,23 +1,20 @@
 #include "sensorUltrasonico.h"
 
-//Constructor
 SensorUltrasonico::SensorUltrasonico(uint8_t trig, uint8_t echo)
 {
     trigPin = trig;
     echoPin = echo;
 }
 
-
-// Configuración inicial del sensor
-void SensorUltrasonico::begin() {
+void SensorUltrasonico::begin()
+{
     pinMode(trigPin, OUTPUT);
     pinMode(echoPin, INPUT);
-
     digitalWrite(trigPin, LOW);
 }
 
-float SensorUltrasonico::getDistanceCm() {
-    // Enviar un pulso ultrasónico de 10 microsegundos
+float SensorUltrasonico::getDistanceCm()
+{
     digitalWrite(trigPin, LOW);
     delayMicroseconds(2);
 
@@ -26,16 +23,14 @@ float SensorUltrasonico::getDistanceCm() {
 
     digitalWrite(trigPin, LOW);
 
-    // Medir el tiempo que tarda en recibir el eco
-    unsigned long duration = pulseIn(echoPin, HIGH, 30000); // Timeout de 30 ms para evitar bloqueos
+    // Timeout de 30 ms evita bloquear indefinidamente si no hay eco.
+    unsigned long duration = pulseIn(echoPin, HIGH, 30000UL);
 
-    if (duration == 0) { // Si no se recibe eco, retornar -1 para indicar error/no hay pared detectada
+    if (duration == 0)
+    {
         return -1;
     }
 
-    // Calcular la distancia en centímetros
-    float distance = (duration * 0.0343) / 2.0; // Velocidad del sonido: 343 m/s
-
+    float distance = (duration * 0.0343) / 2.0;
     return distance;
 }
-

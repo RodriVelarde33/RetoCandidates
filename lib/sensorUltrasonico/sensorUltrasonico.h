@@ -3,9 +3,10 @@
 
 #include <Arduino.h>
 
-class SensorUltrasonico {
+class SensorUltrasonico
+{
 private:
-    uint8_t trigPin; //uint8_t porque son enteros pequeños, 0-255 bits
+    uint8_t trigPin;
     uint8_t echoPin;
 
 public:
@@ -13,9 +14,6 @@ public:
 
     void begin();
     float getDistanceCm();
-
 };
 
 #endif
-
-

@@ -2,34 +2,69 @@
 #define MOVIMIENTO_H
 
 #include <Arduino.h>
-
-// Rutas relativas respetando exactamente las mayúsculas de tus carpetas en lib/
 #include "../moduloPuenteH/moduloPuenteH.h"
 #include "../sensorUltrasonico/sensorUltrasonico.h"
 #include "../SensorDeColor/sensorColor.h"
+#include "../sensorGiro/sensorGiro.h"
 #include "../Garra/garra.h"
-
-#ifndef DISTANCIA_MINIMA
-#define DISTANCIA_MINIMA 20 // Distancia en centímetros
-#endif
 
 class Movimiento
 {
 private:
     PuenteH &puente;
     SensorUltrasonico &frontal;
+    SensorUltrasonico &izquierdo;
+    SensorUltrasonico &derecho;
     SensorColor &colorFrontal;
     Garra &garra;
+    SensorGiro &giro;
     int velocidad;
+    int velocidadGiro;
+    float offsetGiroZ;
+
+    float rumbo;
+    float rumboObjetivo;
+    unsigned long tRumbo;
+
+    void esperarActualizando(unsigned long ms);
 
 public:
-    Movimiento(PuenteH &puente, SensorUltrasonico &frontal, SensorColor &colorFrontal, Garra &garra);
+    Movimiento(PuenteH &puente,
+               SensorUltrasonico &frontal,
+               SensorUltrasonico &izquierdo,
+               SensorUltrasonico &derecho,
+               SensorColor &colorFrontal,
+               Garra &garra,
+               SensorGiro &giro);
 
-    void begin();
+    bool begin();
+
+    void mover(int vIzqReal, int vDerReal);
     void avanzar();
     void retroceder();
     void detener();
-    void actualizar();
+
+    float getDistanciaFrontal();
+    float getDistanciaIzquierda();
+    float getDistanciaDerecha();
+    void leerDistancias(float &frente, float &izq, float &der);
+
+    void actualizarRumbo();
+    void fijarRumbo();
+    float getRumbo() { return rumbo; }
+
+    void avanzarConParedes(float dIzq, float dDer);
+    void avanzarRecto();
+
+    void girarGrados(float grados);
+    void girarDerecha90() { girarGrados(90); }
+    void girarIzquierda90() { girarGrados(-90); }
+    void girar180();
+
+    void retrocederTiempo(unsigned long ms);
+
+    void setVelocidad(int v) { velocidad = v; }
+    void setVelocidadGiro(int v) { velocidadGiro = v; }
 };
 
 #endif

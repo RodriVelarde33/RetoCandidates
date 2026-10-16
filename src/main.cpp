@@ -1,95 +1,125 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include "logica.h"
+#include "config.h"
+#include "movimiento.h"
+#include "garra.h"
 #include "sensorColor.h"
+#include "sensorGiro.h"
+#include "sensorUltrasonico.h"
+#include "moduloPuenteH.h"
 
-// Definición de los sensores según tu diseño:
-// Canal 3: Sensor de Piso
-// Canal 4: Sensor de Frente
-SensorColor sensorPiso(3);
-SensorColor sensorFrente(5);
+// ==================== PINES ====================
+#define PIN_IN1 8
+#define PIN_IN2 9
+#define PIN_IN3 10
+#define PIN_IN4 11
+#define PIN_ENA 2
+#define PIN_ENB 3
 
-// Función auxiliar para imprimir el color detectado en texto legible
-const char *colorToString(ColorDetectado color)
+#define PIN_TRIG_FRONTAL 34
+#define PIN_ECHO_FRONTAL 35
+#define PIN_TRIG_IZQ 32
+#define PIN_ECHO_IZQ 33
+#define PIN_TRIG_DER 53
+#define PIN_ECHO_DER 52
+
+#define CANAL_COLOR_ABAJO 3
+#define PIN_SERVO_GARRA 7
+
+// ==================== INSTANCIAS ====================
+PuenteH puente(PIN_IN1, PIN_IN2, PIN_ENA, PIN_IN3, PIN_IN4, PIN_ENB);
+
+SensorUltrasonico ultrasonicoFrontal(PIN_TRIG_FRONTAL, PIN_ECHO_FRONTAL);
+SensorUltrasonico ultrasonicoIzq(PIN_TRIG_IZQ, PIN_ECHO_IZQ);
+SensorUltrasonico ultrasonicoDer(PIN_TRIG_DER, PIN_ECHO_DER);
+
+SensorColor colorAbajo(CANAL_COLOR_ABAJO);
+SensorGiro giroscopio(0x70, 2, 0x68);
+Garra garra(PIN_SERVO_GARRA);
+
+Movimiento movimiento(puente,
+                      ultrasonicoFrontal,
+                      ultrasonicoIzq,
+                      ultrasonicoDer,
+                      colorAbajo,
+                      garra,
+                      giroscopio);
+
+// ==================== ESTADOS ====================
+enum EstadoGlobal
 {
-    switch (color)
-    {
-    case CIAN:
-        return "CIAN";
-    case AMARILLO:
-        return "AMARILLO";
-    case NARANJA:
-        return "NARANJA";
-    case MAGENTA:
-        return "MAGENTA";
-    default:
-        return "NINGUNO";
-    }
-}
+    CALIBRACION,
+    EJECUTANDO_PISTA_A,
+    FIN_RONDA
+};
 
+EstadoGlobal estadoGlobal = CALIBRACION;
+unsigned long tiempoInicioRonda = 0;
+const unsigned long TIEMPO_CALIBRACION = 3000;
+const unsigned long TIEMPO_RONDA = 480000;
+
+// ==================== SETUP ====================
 void setup()
 {
     Serial.begin(115200);
-    delay(1000);
+    delay(500);
+    Serial.println("=== ROBOT CANDIDATES 2026 ===");
 
-    Wire.begin(); // Inicializa I2C
+    Wire.begin();
+    puente.setFactores(1.0, 1.0);
 
-    Serial.println("\n--- INICIANDO SISTEMA DE COLOR (REGISTROS DIRECTOS) ---");
+    Serial.println("Inicializando movimiento...");
+    const bool movimientoListo = movimiento.begin();
 
-    // Inicializar Sensor de Piso (Canal 3)
-    if (sensorPiso.begin())
+    Serial.println("Inicializando garra...");
+    garra.inicializar(0, 90);
+
+    tiempoInicioRonda = millis();
+    if (!movimientoListo)
     {
-        Serial.println("¡Sensor de Piso (Canal 3) conectado!");
+        estadoGlobal = FIN_RONDA;
+        Serial.println("[ERROR] Robot detenido: revisa MPU6050, TCA9548A, SDA/SCL y alimentacion.");
+        movimiento.detener();
+        return;
     }
-    else
-    {
-        Serial.println("Error: No se detecta el Sensor de Piso en el Canal 3.");
-    }
-
-    // Inicializar Sensor de Frente (Canal 4)
-    if (sensorFrente.begin())
-    {
-        Serial.println("¡Sensor de Frente (Canal 4) conectado!");
-    }
-    else
-    {
-        Serial.println("Error: No se detecta el Sensor de Frente en el Canal 4.");
-    }
-
-    Serial.println("-----------------------------------------------------");
+    Serial.println("Listo. Iniciando Pista A en 3 segundos...");
 }
 
+// ==================== LOOP ====================
 void loop()
 {
-    float rPiso, gPiso, bPiso;
-    float rFrente, gFrente, bFrente;
+    if (estadoGlobal == EJECUTANDO_PISTA_A)
+    {
+        if (millis() - tiempoInicioRonda >= TIEMPO_RONDA)
+        {
+            estadoGlobal = FIN_RONDA;
+            Serial.println("Tiempo agotado.");
+        }
+    }
 
-    // Obtener valores normalizados y colores de ambos sensores
-    sensorPiso.leerRGBNormalizado(rPiso, gPiso, bPiso);
-    ColorDetectado colorPiso = sensorPiso.leerColorActual();
+    switch (estadoGlobal)
+    {
+    case CALIBRACION:
+        if (millis() - tiempoInicioRonda >= TIEMPO_CALIBRACION)
+        {
+            pistaA_init(movimiento);
+            tiempoInicioRonda = millis();
+            estadoGlobal = EJECUTANDO_PISTA_A;
+            Serial.println(">>> EJECUTANDO PISTA A <<<");
+        }
+        break;
 
-    sensorFrente.leerRGBNormalizado(rFrente, gFrente, bFrente);
-    ColorDetectado colorFrente = sensorFrente.leerColorActual();
+    case EJECUTANDO_PISTA_A:
+        if (pistaA_ejecutar(movimiento, colorAbajo))
+        {
+            estadoGlobal = FIN_RONDA;
+            Serial.println(">>> FIN DE PISTA A <<<");
+        }
+        break;
 
-    // Mostrar en Monitor Serie
-    Serial.print("Piso  -> R:");
-    Serial.print(rPiso, 2);
-    Serial.print(" G:");
-    Serial.print(gPiso, 2);
-    Serial.print(" B:");
-    Serial.print(bPiso, 2);
-    Serial.print(" [");
-    Serial.print(colorToString(colorPiso));
-    Serial.print("]   ||   ");
-
-    Serial.print("Frente -> R:");
-    Serial.print(rFrente, 2);
-    Serial.print(" G:");
-    Serial.print(gFrente, 2);
-    Serial.print(" B:");
-    Serial.print(bFrente, 2);
-    Serial.print(" [");
-    Serial.print(colorToString(colorFrente));
-    Serial.println("]");
-
-    delay(250);
+    case FIN_RONDA:
+        movimiento.detener();
+        break;
+    }
 }
