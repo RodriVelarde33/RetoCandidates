@@ -1,99 +1,188 @@
 #include "logica.h"
 #include "config.h"
 
-#define DIST_PARED 20.0
+// Umbrales
+#define DIST_FRENTE_PARADA_CM 15.0f
+#define DIST_FRENTE_DETECCION_CM 28.0f
+#define TIEMPO_AVANCE_MAX_MS 2500
+#define COOLDOWN_COLOR_MS 3000
 
-// Init pista A
+// Estado
+static unsigned long ultimoMostrarColor = 0;
+
+// ==================== HELPERS ====================
+// Es color intermedio?
+static bool esColorIntermedio(ColorDetectado c)
+{
+    return c == COLOR_A_1 || c == COLOR_A_2 ||
+           c == COLOR_A_3 || c == COLOR_A_4;
+}
+
+// Pared al frente? (2 de 3 lecturas)
+static bool hayParedFrente(Movimiento &mov, float umbral)
+{
+    int cuantos = 0;
+    for (int i = 0; i < 3; i++)
+    {
+        float d = mov.getDistanciaFrontal();
+        if (d > 0 && d < umbral)
+            cuantos++;
+        delay(15);
+    }
+    return cuantos >= 2;
+}
+
+// Checar color
+//   0 = seguir
+//   1 = FIN (rojo)
+//   2 = color mostrado (ya paro + parpadeo)
+static int checarColor(Movimiento &mov, SensorColor &color)
+{
+    if (millis() - ultimoMostrarColor < COOLDOWN_COLOR_MS)
+        return 0;
+
+    ColorDetectado c = color.detectarColorNuevo();
+
+    if (c == COLOR_A_FINAL)
+    {
+        Serial.println("[PISTA A] FIN!");
+        return 1;
+    }
+
+    if (esColorIntermedio(c))
+    {
+        Serial.print("[PISTA A] Color: ");
+        Serial.println((int)c);
+        mov.detener();
+        mostrarColor(c);
+        ultimoMostrarColor = millis();
+        return 2;
+    }
+
+    return 0;
+}
+
+// ==================== INIT ====================
 void pistaA_init(Movimiento &mov)
 {
     Serial.println("[PISTA A] Inicializando MAZE...");
-    mov.setVelocidad(130);
+    mov.setVelocidad(VEL_AVANCE_PWM);
+    mov.setVelocidadGiro(VEL_GIRO_PWM);
+
+    pinMode(LED_1, OUTPUT);
+    apagarLEDs();
+
+    ultimoMostrarColor = 0;
 }
 
-// Logica principal
+// ==================== LOGICA PRINCIPAL ====================
 bool pistaA_ejecutar(Movimiento &mov, SensorColor &color)
 {
-    // Leer color
-    ColorDetectado c = color.detectarColorNuevo();
-
-    // Color intermedio -> mostrar
-    if (c == COLOR_A_1 || c == COLOR_A_2 ||
-        c == COLOR_A_3 || c == COLOR_A_4)
+    // Chequeo inicial de color
+    int r = checarColor(mov, color);
+    if (r == 1)
     {
-        Serial.print("[PISTA A] Color detectado: ");
-        Serial.println((int)c);
-        mostrarColor(c);
-        return false;
-    }
-
-    // Rojo -> fin
-    if (c == COLOR_A_FINAL)
-    {
-        Serial.println("[PISTA A] Checkpoint final alcanzado!");
         mov.detener();
         return true;
     }
+    if (r == 2)
+        return false;
 
-    // Leer ultrasonicos
-    float dFrente = mov.getDistanciaFrontal();
-    float dDer = mov.getDistanciaDerecha();
-    float dIzq = mov.getDistanciaIzquierda();
+    // Avanzar
+    Serial.println("[PISTA A] Avanzando...");
+    unsigned long t0 = millis();
 
-    // Sin eco = 999 (libre)
-    if (dFrente < 0)
-        dFrente = 999;
-    if (dDer < 0)
-        dDer = 999;
-    if (dIzq < 0)
-        dIzq = 999;
-
-    bool paredFrente = (dFrente < DIST_PARED);
-    bool paredDer = (dDer < DIST_PARED);
-    bool paredIzq = (dIzq < DIST_PARED);
-
-    // Decidir
-    if (!paredFrente)
+    while (millis() - t0 < TIEMPO_AVANCE_MAX_MS)
     {
-        mov.avanzar();
+        // Chequeo de color mientras avanza
+        r = checarColor(mov, color);
+        if (r == 1)
+        {
+            mov.detener();
+            return true;
+        }
+        if (r == 2)
+            return false;
+
+        // Pared cerca? -> frenar y girar
+        float dF = mov.getDistanciaFrontal();
+        if (dF > 0 && dF < DIST_FRENTE_PARADA_CM)
+        {
+            // Confirmar con segunda lectura
+            delay(30);
+            float dF2 = mov.getDistanciaFrontal();
+            if (dF2 > 0 && dF2 < DIST_FRENTE_PARADA_CM)
+            {
+                Serial.print("[PISTA A] Pared cerca (");
+                Serial.print(dF2);
+                Serial.println(" cm) -> giro DERECHA");
+                break;
+            }
+        }
+
+        // Avanzar con correccion de paredes
+        float dI = mov.getDistanciaIzquierda();
+        float dD = mov.getDistanciaDerecha();
+        mov.avanzarConParedes(dI, dD);
+
+        delay(10);
     }
-    else if (paredFrente && !paredDer)
+
+    mov.detener();
+    delay(300);
+
+    // Girar a la derecha (siempre)
+    if (hayParedFrente(mov, DIST_FRENTE_PARADA_CM))
     {
-        // Pared al frente, derecha libre -> girar derecha
-        Serial.println("[PISTA A] Giro derecha");
-        mov.detener();
-        delay(150);
+        Serial.println("[PISTA A] -> Giro DERECHA");
         mov.girarDerecha90();
-    }
-    else if (paredFrente && paredDer && !paredIzq)
-    {
-        // Frente y derecha tapados -> girar izquierda
-        Serial.println("[PISTA A] Giro izquierda");
-        mov.detener();
-        delay(150);
-        mov.girarIzquierda90();
     }
     else
     {
-        // Todo tapado -> 180
-        Serial.println("[PISTA A] Giro 180");
-        mov.detener();
-        delay(150);
-        mov.girar180();
+        Serial.println("[PISTA A] -> No hay pared, seguir");
     }
 
     return false;
 }
 
-// Mostrar color
+// ==================== UTILIDADES ====================
 void mostrarColor(ColorDetectado color)
 {
-    Serial.print("[COLOR] Mostrando: ");
-    Serial.println((int)color);
-    delay(3000);
+    int parpadeos = 0;
+
+    switch (color)
+    {
+    case ColorDetectado::AZUL:
+        parpadeos = 1;
+        break;
+    case ColorDetectado::AMARILLO:
+        parpadeos = 2;
+        break;
+    case ColorDetectado::NARANJA:
+        parpadeos = 3;
+        break;
+    case ColorDetectado::ROSA:
+        parpadeos = 4;
+        break;
+    default:
+        return;
+    }
+
+    Serial.print("[LED] Parpadeos: ");
+    Serial.println(parpadeos);
+
+    for (int i = 0; i < parpadeos; i++)
+    {
+        digitalWrite(LED_1, HIGH);
+        delay(LED_ON_MS);
+        digitalWrite(LED_1, LOW);
+        delay(LED_OFF_MS);
+    }
+
+    digitalWrite(LED_1, LOW);
 }
 
-// Apagar LEDs
 void apagarLEDs()
 {
-    // TODO: cuando tengas LEDs
+    digitalWrite(LED_1, LOW);
 }
