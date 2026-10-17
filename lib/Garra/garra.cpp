@@ -21,6 +21,11 @@ void Garra::abrir()
 
 void Garra::cerrar()
 {
-    servo.write(anguloCerrada);
+    cerrarSinEspera();
     delay(400);
+}
+
+void Garra::cerrarSinEspera()
+{
+    servo.write(anguloCerrada);
 }
