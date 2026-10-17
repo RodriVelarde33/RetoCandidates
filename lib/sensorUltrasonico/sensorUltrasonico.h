@@ -3,12 +3,11 @@
 
 #include <Arduino.h>
 
-// Config local (evita dependencia de config.h)
-#define BUFFER_SIZE 5
+#define BUFFER_SIZE 3
 #define ULTRASONICO_MIN_CM 2.0f
 #define ULTRASONICO_MAX_CM 200.0f
-#define ULTRASONICO_TIMEOUT_US 30000UL
-#define ULTRASONICO_INTERVALO_MS 30UL
+#define ULTRASONICO_TIMEOUT_US 25000UL
+#define ULTRASONICO_INTERVALO_MS 40UL
 
 class SensorUltrasonico
 {

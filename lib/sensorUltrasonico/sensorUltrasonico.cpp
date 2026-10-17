@@ -41,11 +41,8 @@ float SensorUltrasonico::leerPulsoCm()
 
     float distancia = (duracion * 0.0343f) / 2.0f;
 
-    if (distancia < ULTRASONICO_MIN_CM ||
-        distancia > ULTRASONICO_MAX_CM)
-    {
+    if (distancia < ULTRASONICO_MIN_CM || distancia > ULTRASONICO_MAX_CM)
         return -1.0f;
-    }
 
     return distancia;
 }
@@ -83,8 +80,7 @@ float SensorUltrasonico::calcularMediana()
 
 void SensorUltrasonico::update(unsigned long ahora)
 {
-    if (ultimaMedicion != 0 &&
-        ahora - ultimaMedicion < ULTRASONICO_INTERVALO_MS)
+    if (ultimaMedicion != 0 && ahora - ultimaMedicion < ULTRASONICO_INTERVALO_MS)
     {
         return;
     }
