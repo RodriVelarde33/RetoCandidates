@@ -38,6 +38,7 @@ enum EstadoGlobal
 {
     CALIBRACION,
     EJECUTANDO_PISTA_A,
+    EJECUTANDO_PISTA_B,
     FIN_RONDA
 };
 EstadoGlobal estadoGlobal = CALIBRACION;
@@ -67,7 +68,9 @@ void setup()
 void loop()
 {
     unsigned long ahora = millis();
-    if (estadoGlobal == EJECUTANDO_PISTA_A && ahora - tiempoInicioRonda >= TIEMPO_RONDA_MS)
+
+    if (estadoGlobal == EJECUTANDO_PISTA_A &&
+        ahora - tiempoInicioRonda >= TIEMPO_RONDA_MS)
     {
         estadoGlobal = FIN_RONDA;
         Serial.println(F("Tiempo agotado."));
@@ -91,6 +94,7 @@ void loop()
             Serial.println(F(">>> FIN <<<"));
         }
         break;
+
     case FIN_RONDA:
         movimiento.detener();
         apagarLEDs();
